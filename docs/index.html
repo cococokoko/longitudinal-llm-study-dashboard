@@ -1,0 +1,1718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Longitudinal LLM Study</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bitcount+Prop+Single:wght@100..900&display=swap" rel="stylesheet" />
+
+  <style>
+    /* ── Design tokens ─────────────────────────────────── */
+    :root {
+      --bg:          #f8f8ef;
+      --surface:     #FDFDF5;
+      --header-bg:   #D0E6E5;
+      --border-dark: #2D2D2D;
+      --border-gray: #D0D0D0;
+      --teal:        #40ABC9;
+      --teal-tag:    rgba(174,221,234,.3);
+      --coral:       #E57657;
+      --coral-stat:  #e57859;
+      --gray-tag:    rgba(208,208,208,.3);
+      --text:        #111;
+      --text-gray:   #374151;
+      --text-muted:  #6b7280;
+      --text-light:  #9ca3af;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Ubuntu', system-ui, sans-serif;
+      font-size: 14px;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* ── Header ────────────────────────────────────────── */
+    .site-header {
+      background: var(--header-bg);
+      border-bottom: 1px solid var(--border-dark);
+      position: sticky; top: 0; z-index: 200;
+    }
+    .site-nav {
+      max-width: 1300px; margin: 0 auto; padding: 0 24px;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 64px;
+    }
+    .site-brand {
+      font-family: 'Bitcount Prop Single', sans-serif;
+      font-size: 1.1rem; font-weight: 600;
+      color: var(--text); text-decoration: none;
+    }
+    .nav-links {
+      display: flex; align-items: center;
+      gap: 32px;
+      font-family: 'Bitcount Prop Single', sans-serif;
+      font-size: .9rem;
+    }
+    .nav-links a {
+      color: var(--text); text-decoration: none; transition: opacity .15s;
+    }
+    .nav-links a:hover { text-decoration: underline; }
+    .nav-links a.active { text-decoration: underline; }
+    .nav-date { font-family: 'Ubuntu', sans-serif; font-size: 11px; color: #555; }
+
+    /* ── Page show/hide ────────────────────────────────── */
+    .page { display: none; flex: 1; flex-direction: column; }
+    .page.active { display: flex; flex-direction: column; }
+
+    /* ── Hero ──────────────────────────────────────────── */
+    .hero {
+      background: var(--surface);
+      padding: 36px 0 28px;
+    }
+    .hero-inner { max-width: 1300px; margin: 0 auto; padding: 0 24px; }
+    .hero-title {
+      font-family: 'Bitcount Prop Single', sans-serif;
+      font-size: 2rem; font-weight: 700; letter-spacing: .06em;
+      margin-bottom: 6px;
+    }
+    .hero-desc { color: rgba(0,0,0,.65); font-size: .9rem; margin-bottom: 24px; }
+
+    /* ── Stats ─────────────────────────────────────────── */
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(5,1fr); gap: 16px;
+    }
+    .stat-box {
+      border: 1px solid var(--border-dark); border-radius: 12px;
+      height: 80px; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; background: transparent;
+      cursor: pointer; transition: box-shadow .15s, border-color .15s;
+    }
+    .stat-box:hover { box-shadow: 0 2px 10px rgba(0,0,0,.1); border-color: var(--teal); }
+    .stat-box.active { border-color: var(--teal); background: rgba(64,171,201,.06); }
+    .stat-value { font-size: 1.7rem; font-weight: 700; color: var(--coral-stat); line-height: 1; }
+    .stat-label { font-size: 11px; color: var(--text-muted); text-align: center; margin-top: 5px; }
+
+    /* ── Wave detail panel ─────────────────────────────── */
+    .wave-detail-panel {
+      max-width: 1300px; margin: 0 auto; padding: 0 24px;
+      display: none;
+    }
+    .wave-detail-panel.open { display: block; padding-bottom: 20px; }
+    .wave-detail-inner {
+      border: 1px solid var(--border-dark); border-radius: 12px;
+      overflow: hidden; background: var(--surface);
+    }
+    .wave-detail-header {
+      padding: 12px 18px; border-bottom: 1px solid var(--border-gray);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .wave-detail-title { font-weight: 700; font-size: .95rem; }
+    .wave-detail-close {
+      background: none; border: none; cursor: pointer; font-size: 1.1rem;
+      color: var(--text-muted); line-height: 1; padding: 2px 6px; border-radius: 4px;
+    }
+    .wave-detail-close:hover { background: #f3f4f6; color: var(--text); }
+    .wave-rows { max-height: 380px; overflow-y: auto; }
+    .wave-row {
+      display: grid; padding: 10px 18px;
+      border-bottom: 1px solid #f3f4f6; align-items: center;
+      font-size: 13px;
+    }
+    .wave-row:last-child { border-bottom: none; }
+    .wave-row.header { background: #f9f9f4; font-size: 10.5px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .4px; color: var(--text-light);
+      position: sticky; top: 0; z-index: 1; border-bottom: 1px solid var(--border-gray); }
+    .wave-date { font-weight: 600; color: #111; }
+    .wave-cell { color: var(--text-gray); font-size: 12px; }
+    .wave-cell .ver { font-size: 10px; color: var(--text-light); margin-top: 1px; }
+
+    /* ── Type / sub-tab bar ────────────────────────────── */
+    .type-bar {
+      background: var(--surface);
+      border-top: 1px solid #e5e7eb; border-bottom: 1px solid var(--border-dark);
+      padding: 10px 0;
+    }
+    .type-bar-inner {
+      max-width: 1300px; margin: 0 auto; padding: 0 24px;
+      display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    }
+    .type-label { font-size: 12px; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .08em; white-space: nowrap; }
+    .sub-btn {
+      padding: 6px 16px; border-radius: 8px;
+      border: 1px solid var(--border-gray); background: white;
+      color: var(--text-gray); font-size: 13px; font-weight: 500;
+      font-family: 'Ubuntu', sans-serif; cursor: pointer; transition: all .15s;
+    }
+    .sub-btn:hover:not(.active) { background: #f9f9f9; }
+    .sub-btn.active { background: #f0A68F; color: #1f2937; font-weight: 700; }
+
+    /* ── Main container ────────────────────────────────── */
+    .main-wrap {
+      max-width: 1300px; margin: 0 auto; padding: 24px;
+      flex: 1; width: 100%;
+    }
+    .two-col {
+      display: grid; grid-template-columns: 240px 1fr; gap: 24px; align-items: start;
+    }
+
+    /* ── Sidebar ───────────────────────────────────────── */
+    .sidebar { position: sticky; top: 88px; max-height: calc(100vh - 108px); overflow-y: auto; }
+    .sidebar-box {
+      border: 1px solid var(--border-dark); border-radius: 12px;
+      padding: 16px; display: flex; flex-direction: column; gap: 18px;
+    }
+    .sidebar-head {
+      display: flex; justify-content: space-between; align-items: center;
+      padding-bottom: 10px; border-bottom: 1px solid #9ca3af;
+    }
+    .sidebar-title { font-weight: 700; font-size: 1rem; color: #111827; }
+    .fl-label {
+      font-size: 11px; font-weight: 700; color: var(--text-gray);
+      text-transform: uppercase; letter-spacing: .5px; margin-bottom: 7px;
+    }
+    .fl-stack { display: flex; flex-direction: column; gap: 5px; }
+    .fl-btn {
+      display: block; width: 100%; text-align: left;
+      padding: 7px 12px; border-radius: 8px;
+      border: 1px solid var(--border-gray); background: white;
+      color: var(--text-gray); font-size: 13px;
+      font-family: 'Ubuntu', sans-serif; cursor: pointer; transition: all .15s;
+    }
+    .fl-btn:hover:not(.active) { background: #f9fafb; }
+    .fl-btn.active { background: rgba(64,171,201,.1); color: var(--teal); border-color: rgba(64,171,201,.4); }
+    .search-wrap { position: relative; }
+    .search-wrap .s-ico {
+      position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+      width: 14px; height: 14px; color: #9ca3af; pointer-events: none;
+    }
+    .search-input {
+      width: 100%; padding: 8px 10px 8px 30px;
+      border: 1px solid #d1d5db; border-radius: 8px;
+      font-size: 13px; font-family: 'Ubuntu', sans-serif;
+      color: #111827; background: white; outline: none; transition: all .15s;
+    }
+    .search-input:focus { border-color: var(--coral); box-shadow: 0 0 0 3px rgba(64,171,201,.15); }
+    .search-input::placeholder { color: #9ca3af; }
+    .page-row { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--text-muted); }
+    .page-btns { display: flex; gap: 5px; }
+    .page-btn {
+      padding: 3px 9px; border: 1px solid var(--border-gray); border-radius: 6px;
+      background: white; font-size: 12px; cursor: pointer;
+      font-family: 'Ubuntu', sans-serif; transition: all .15s;
+    }
+    .page-btn:hover { background: #f9fafb; }
+    .page-btn.active { background: #f0A68F; color: #1f2937; font-weight: 700; border-color: #f0A68F; }
+    .page-btn:disabled { opacity: .4; cursor: not-allowed; }
+    .info-wrap { position: relative; display: inline-block; vertical-align: middle; margin-left: 6px; }
+    .info-dot {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 16px; height: 16px; border-radius: 50%; background: var(--border-gray);
+      color: #4b5563; font-size: 10px; font-weight: 700; cursor: pointer;
+      border: none; padding: 0; font-family: 'Ubuntu', sans-serif; line-height: 1;
+    }
+    .info-dot:hover { background: #d1d5db; }
+    .info-popover {
+      /* position: fixed (not absolute) so this can't get clipped by any ancestor's
+         overflow-x: hidden (e.g. #page-analysis .main-wrap) — position is computed
+         in JS from the dot's viewport rect and clamped to stay on-screen. */
+      display: none; position: fixed; z-index: 30;
+      width: max-content; max-width: 320px; background: white;
+      border: 1px solid var(--border-gray); border-radius: 8px;
+      padding: 10px 12px; font-size: 12px; line-height: 1.5; color: #374151;
+      font-weight: 400; text-transform: none; letter-spacing: normal;
+      box-shadow: 0 6px 20px rgba(0,0,0,.12);
+    }
+    .info-popover.open { display: block; }
+    .commercial-filter-bar {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+      margin-bottom: 20px; padding: 12px 14px; background: var(--surface);
+      border-radius: 8px; border: 1px solid var(--border-gray);
+    }
+    .commercial-graph-head {
+      display: flex; align-items: center; justify-content: space-between;
+      flex-wrap: wrap; gap: 8px; margin-top: 24px;
+    }
+
+    /* ── Section note ──────────────────────────────────── */
+    .section-note {
+      font-size: 13px; color: #4b5563;
+      background: var(--surface); border-left: 3px solid var(--teal);
+      padding: 10px 14px; border-radius: 0 8px 8px 0;
+      margin-bottom: 20px; line-height: 1.65;
+    }
+
+    /* ── Tags ──────────────────────────────────────────── */
+    .tag {
+      display: inline-block; padding: 2px 8px; border-radius: 4px;
+      font-size: 10px; font-weight: 500; line-height: 1.6; white-space: nowrap;
+    }
+    .tag-adv { background: #fef3c7; color: #92400e; }
+    .tag-inf  { background: var(--teal-tag); color: #0e7490; }
+    .badge-teal {
+      background: rgba(64,171,201,.1); color: var(--teal);
+      border: 1px solid rgba(64,171,201,.25); padding: 2px 9px;
+      border-radius: 999px; font-size: 11px; font-weight: 600;
+      display: inline-block; max-width: 200px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    /* ── Open-ended prompt rows ────────────────────────── */
+    .prompt-rows { display: flex; flex-direction: column; gap: 10px; }
+    .prompt-row {
+      background: var(--surface); border: 1px solid var(--border-dark);
+      border-radius: 12px; padding: 18px 20px;
+      transition: box-shadow .15s;
+    }
+    .prompt-row:hover { box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+    .row-header {
+      display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px;
+    }
+    .row-query {
+      font-size: 14px; font-weight: 700; color: #111827;
+      line-height: 1.4; flex: 1;
+    }
+    /* SES section grouping */
+    .ses-section { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .ses-label {
+      font-size: 10px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .5px; color: var(--text-muted); margin-bottom: 2px;
+    }
+    .ses-label.high { color: var(--teal); }
+    .ses-label.low  { color: var(--coral); }
+    /* System message → blockquote style */
+    .framing-block {
+      border-left: 3px solid var(--teal);
+      padding: 8px 12px; border-radius: 0 6px 6px 0;
+      background: rgba(64,171,201,.06);
+      font-size: 12px; color: var(--text-gray); line-height: 1.6;
+      font-style: italic;
+    }
+    .ses-section.low .framing-block {
+      border-left-color: var(--coral);
+      background: rgba(229,118,87,.05);
+    }
+    /* Inline prompt → normal text */
+    .framing-inline {
+      font-size: 12px; color: var(--text-muted);
+      line-height: 1.6; padding: 4px 0 0 4px;
+    }
+    .framing-type {
+      font-size: 10px; font-weight: 600; text-transform: uppercase;
+      letter-spacing: .4px; color: var(--text-light); margin-bottom: 4px;
+    }
+
+    /* ── WVS table ─────────────────────────────────────── */
+    .table-wrap { border: 1px solid var(--border-dark); border-radius: 12px; overflow: hidden; }
+    .data-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .data-table thead th {
+      background: var(--surface); border-bottom: 1px solid var(--border-dark);
+      color: var(--text-light); font-size: 10.5px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .5px;
+      padding: 10px 14px; text-align: left;
+    }
+    .data-table tbody td {
+      padding: 11px 14px; border-bottom: 1px solid #f3f4f6;
+      vertical-align: top; color: var(--text-gray);
+    }
+    .data-table tbody tr:last-child td { border-bottom: none; }
+    .data-table tbody tr:hover td { background: var(--surface); }
+    .versions-scroll { overflow-x: auto; }
+    .versions-scroll table { width: max-content; min-width: 100%; }
+    .versions-scroll th, .versions-scroll td { white-space: nowrap; }
+    .versions-scroll thead th:first-child, .versions-scroll tbody td:first-child {
+      position: sticky; left: 0; background: var(--surface); z-index: 1;
+    }
+    .dist-bar { display: flex; height: 8px; border-radius: 3px; overflow: hidden; width: 180px; }
+    .dist-bar div { height: 100%; }
+    .dist-legend { font-size: 10px; color: var(--text-light); margin-top: 3px; }
+
+    /* ── Chart elements ────────────────────────────────── */
+    .chart-title {
+      font-size: 11px; font-weight: 700; color: var(--text-light);
+      text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px;
+      flex-shrink: 0;
+    }
+    .plotly-wrap {
+      background: var(--surface); border: 1px solid var(--border-dark);
+      border-radius: 12px; padding: 8px;
+      overflow: hidden; /* clip chart backgrounds to rounded border */
+    }
+    /* Side-by-side chart grid */
+    .chart-row { display: grid; gap: 16px; }
+    .chart-row.cols-2 { grid-template-columns: 1fr 1fr; }
+    .chart-row.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .chart-col-label { font-weight: 600; text-align: center; font-size: 12px; margin-bottom: 6px; }
+
+    /* ── Analysis sub-panels ───────────────────────────── */
+    #page-analysis .main-wrap { overflow-x: hidden; }
+    .chart-row { width: 100%; }
+    .plotly-wrap { max-width: 100%; }
+    .analysis-panel { display: none; }
+    .analysis-panel.active { display: block; }
+
+    /* ── Home page ─────────────────────────────────────── */
+    .home-hero {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border-dark);
+      padding: 56px 0 48px;
+    }
+    .home-inner { max-width: 820px; margin: 0 auto; padding: 0 24px; }
+    .home-title {
+      font-family: 'Bitcount Prop Single', sans-serif;
+      font-size: 2.4rem; font-weight: 700; letter-spacing: .06em;
+      margin-bottom: 28px;
+    }
+    .home-body {
+      font-size: 1rem; line-height: 1.8; color: #222;
+      margin-bottom: 32px;
+    }
+    .home-body p { margin-bottom: 0; }
+    .home-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 32px; }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px; border-radius: 8px;
+      background: var(--teal); color: white; font-size: 13px; font-weight: 600;
+      font-family: 'Ubuntu', sans-serif; text-decoration: none;
+      border: 1px solid var(--teal); transition: all .15s; cursor: pointer;
+    }
+    .btn-primary:hover { background: #358fa8; border-color: #358fa8; }
+    .btn-outline {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px; border-radius: 8px;
+      background: white; color: var(--text-gray); font-size: 13px; font-weight: 600;
+      font-family: 'Ubuntu', sans-serif; text-decoration: none;
+      border: 1px solid var(--border-dark); transition: all .15s; cursor: pointer;
+    }
+    .btn-outline:hover { background: #f9f9f9; }
+
+    /* ── Footer ────────────────────────────────────────── */
+    .site-footer {
+      background: var(--surface); border-top: 1px solid #e5e7eb; margin-top: auto;
+    }
+    .footer-inner {
+      max-width: 1300px; margin: 0 auto; padding: 20px 24px;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 8px;
+    }
+    .footer-copy { font-size: 13px; color: var(--text); }
+
+    /* ── Responsive ────────────────────────────────────── */
+    @media (max-width: 1024px) {
+      .two-col { grid-template-columns: 1fr; }
+      .sidebar { position: static; max-height: none; }
+      .stats-grid { grid-template-columns: repeat(3,1fr); }
+      .chart-row.cols-2, .chart-row.cols-3 { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      .home-title { font-size: 1.7rem; }
+      .stats-grid { grid-template-columns: repeat(2,1fr); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══════════════════════════════════════════ -->
+<header class="site-header">
+  <nav class="site-nav">
+    <a href="#home" class="site-brand" data-nav="home">Longitudinal LLM Study</a>
+    <div class="nav-links">
+      <a href="#home"     data-nav="home">Home</a>
+      <a href="#overview" data-nav="overview">Overview</a>
+      <a href="#analysis" data-nav="analysis">Analysis</a>
+      <span class="nav-date" id="nav-date"></span>
+    </div>
+  </nav>
+</header>
+
+<!-- ═══ PAGE: HOME ═══════════════════════════════════════ -->
+<div class="page" id="page-home">
+  <section class="home-hero">
+    <div class="home-inner">
+      <h1 class="home-title">LONGITUDINAL LLM STUDY</h1>
+      <div class="home-body">
+        <p>
+          Large language models offered by leading tech firms are
+          continuously being updated.
+          Human–AI interactions from today influence the models of tomorrow.
+          At the same time, commercial interests shape the development of LLMs.
+          In this project we design an automated experimental pipeline
+          to monitor and study how the output of LLMs evolves over time
+          to gain new insights into how models and society co-evolve.
+        </p>
+      </div>
+      <div class="home-actions">
+        <a href="#overview" class="btn-primary" data-nav="overview">
+          View Study Overview
+        </a>
+        <a href="https://github.com/cococokoko/longitudinal-llm-study" class="btn-outline" target="_blank" rel="noopener">
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0 0 24 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+          GitHub
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <span class="footer-copy">© 2026 Algorithms and Society research group — ELLIS Tübingen</span>
+    </div>
+  </footer>
+</div>
+
+<!-- ═══ PAGE: OVERVIEW ════════════════════════════════════ -->
+<div class="page" id="page-overview">
+
+  <!-- Stats hero -->
+  <section class="hero">
+    <div class="hero-inner">
+      <h1 class="hero-title">STUDY OVERVIEW</h1>
+      <p class="hero-desc">Explore the prompts and experimental design used across waves. Click a card for details.</p>
+      <div class="stats-grid">
+        <div class="stat-box" id="card-waves" title="Click to see per-wave response counts">
+          <span class="stat-value" id="stat-waves">—</span>
+          <span class="stat-label">Waves Collected</span>
+        </div>
+        <div class="stat-box" id="card-models" title="Click to see model details">
+          <span class="stat-value">3</span>
+          <span class="stat-label">Models Tracked</span>
+        </div>
+        <div class="stat-box" id="card-wvs" title="Click to browse WVS questions">
+          <span class="stat-value" id="stat-wvs">—</span>
+          <span class="stat-label">WVS Questions</span>
+        </div>
+        <div class="stat-box" id="card-persona" title="Click to browse open-ended prompts">
+          <span class="stat-value" id="stat-persona">—</span>
+          <span class="stat-label">Open-ended Prompts</span>
+        </div>
+        <div class="stat-box" id="card-explorative" title="Click to browse explorative prompts">
+          <span class="stat-value" id="stat-explorative">—</span>
+          <span class="stat-label">Explorative Prompts</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Wave detail panel (shown when "Waves Collected" card is clicked) -->
+  <div class="wave-detail-panel" id="wave-detail-panel">
+    <div class="wave-detail-inner">
+      <div class="wave-detail-header">
+        <span class="wave-detail-title">Responses per Wave</span>
+        <button class="wave-detail-close" id="wave-detail-close" title="Close">✕</button>
+      </div>
+      <div class="wave-rows" id="wave-rows"></div>
+    </div>
+  </div>
+
+  <!-- Models detail panel (shown when "Models Tracked" card is clicked) -->
+  <div class="wave-detail-panel" id="models-detail-panel">
+    <div class="wave-detail-inner">
+      <div class="wave-detail-header">
+        <span class="wave-detail-title">Models Tracked</span>
+        <button class="wave-detail-close" id="models-detail-close" title="Close">✕</button>
+      </div>
+      <div class="wave-rows" id="models-rows"></div>
+    </div>
+  </div>
+
+  <!-- Type of prompt bar -->
+  <div class="type-bar">
+    <div class="type-bar-inner">
+      <span class="type-label">Type of prompt:</span>
+      <button class="sub-btn active" data-prompt="openended">Open-ended Prompts</button>
+      <button class="sub-btn" data-prompt="wvs">WVS Questions</button>
+      <button class="sub-btn" data-prompt="explorative">Explorative Prompts</button>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="main-wrap">
+    <div class="two-col">
+
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <div class="sidebar-box">
+          <div class="sidebar-head">
+            <span class="sidebar-title">Filters</span>
+          </div>
+
+          <div class="search-wrap">
+            <svg class="s-ico" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+            </svg>
+            <input type="text" id="prompt-search" class="search-input" placeholder="Search…" />
+          </div>
+
+          <div id="src-section">
+            <p class="fl-label">Source</p>
+            <div class="fl-stack">
+              <button class="fl-btn active" data-src="all">All</button>
+              <button class="fl-btn" data-src="advertising">Advertising</button>
+              <button class="fl-btn" data-src="infinity_chat">Infinity Chat</button>
+            </div>
+          </div>
+
+          <div id="persona-pager">
+            <div class="page-row">
+              <span>Showing <span id="persona-range">—</span> of <span id="persona-total">—</span></span>
+              <div class="page-btns">
+                <button class="page-btn" id="persona-prev">‹</button>
+                <button class="page-btn" id="persona-next">›</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="wvs-pager" style="display:none">
+            <div class="page-row">
+              <span>Showing <span id="wvs-range">—</span> of <span id="wvs-total">—</span></span>
+              <div class="page-btns">
+                <button class="page-btn" id="wvs-prev">‹</button>
+                <button class="page-btn" id="wvs-next">›</button>
+              </div>
+            </div>
+          </div>
+
+          <div id="explorative-format-section" style="display:none">
+            <p class="fl-label">Format</p>
+            <div class="fl-stack">
+              <button class="fl-btn active" data-efmt="all">All</button>
+              <button class="fl-btn" data-efmt="best">Best</button>
+              <button class="fl-btn" data-efmt="recommendation">Recommendation</button>
+              <button class="fl-btn" data-efmt="top_n">Top N</button>
+              <button class="fl-btn" data-efmt="how_to">How To</button>
+              <button class="fl-btn" data-efmt="creative">Creative</button>
+            </div>
+          </div>
+
+          <div id="explorative-pager" style="display:none">
+            <div class="page-row">
+              <span>Showing <span id="explorative-range">—</span> of <span id="explorative-total">—</span></span>
+              <div class="page-btns">
+                <button class="page-btn" id="explorative-prev">‹</button>
+                <button class="page-btn" id="explorative-next">›</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <!-- Main content -->
+      <div>
+
+        <!-- Open-ended rows -->
+        <div id="sub-openended">
+          <p class="section-note">
+            Open-ended prompts drawn from two query sources, each tested under a
+            <strong>baseline</strong> condition and <strong>high / low SES</strong> persona framings
+            delivered either via system message or inline in the user prompt.
+          </p>
+          <div class="prompt-rows" id="persona-rows"></div>
+        </div>
+
+        <!-- WVS table -->
+        <div id="sub-wvs" style="display:none">
+          <p class="section-note">282 World Values Survey Wave 7 questions sent every wave. Models respond with a JSON probability distribution over answer options (A, B, C…). The global distribution will be shown once distributions are added to the dataset.</p>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width:36px">#</th>
+                  <th>Question</th>
+                  <th style="width:220px">Answer Options</th>
+                  <th style="width:230px">WVS Global Distribution</th>
+                </tr>
+              </thead>
+              <tbody id="wvs-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Explorative prompts -->
+        <div id="sub-explorative" style="display:none">
+          <p class="section-note">
+            26 short, commercially-relevant queries sent without persona framing.
+            Designed to detect product placement and brand bias in model responses —
+            spanning <strong>best / recommendation / top-N / how-to / creative</strong> formats
+            across smartphones, AI assistants, cloud services, and messaging tools.
+          </p>
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width:36px">#</th>
+                  <th style="width:110px">Topic</th>
+                  <th style="width:120px">Format</th>
+                  <th>Prompt</th>
+                </tr>
+              </thead>
+              <tbody id="explorative-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <div class="footer-inner">
+      <span class="footer-copy">© 2026 Algorithms and Society research group — ELLIS Tübingen</span>
+    </div>
+  </footer>
+</div>
+
+<!-- ═══ PAGE: ANALYSIS ════════════════════════════════════ -->
+<div class="page" id="page-analysis">
+
+  <!-- Analysis sub-tab bar -->
+  <div class="type-bar">
+    <div class="type-bar-inner">
+      <span class="type-label">Measures:</span>
+      <button class="sub-btn active" data-analysis="versions">Study Metrics</button>
+      <button class="sub-btn" data-analysis="alignment">Value Alignment</button>
+      <button class="sub-btn" data-analysis="lengths">Response Lengths</button>
+      <button class="sub-btn" data-analysis="diversity">Output Diversity</button>
+      <button class="sub-btn" data-analysis="steering">Steering Sensitivity</button>
+      <button class="sub-btn" data-analysis="commercial">Commercial</button>
+    </div>
+  </div>
+
+  <div class="main-wrap">
+
+    <!-- Study Metrics -->
+    <div class="analysis-panel active" id="panel-versions">
+      <p class="section-note">Exact model version strings returned by the API per wave. Count = successful (non-error) calls.</p>
+      <div id="versions-wrap"></div>
+
+      <div class="chart-title" style="margin-top:28px">Mean Output Tokens per Response per Wave</div>
+      <div class="plotly-wrap" id="chart-output-tokens" style="height:300px;margin-bottom:24px"></div>
+
+      <div class="chart-title">Output Truncation Rate per Wave (finish_reason = length)</div>
+      <div class="plotly-wrap" id="chart-truncation" style="height:260px;margin-bottom:16px"></div>
+      <div id="truncation-table"></div>
+    </div>
+
+    <!-- Value Alignment: WVS7 -->
+    <div class="analysis-panel" id="panel-alignment">
+      <p class="section-note">
+        <strong>Wasserstein</strong> = earth mover's distance vs the WVS global distribution (0 = perfect match).
+        <strong>Entropy</strong> = Shannon entropy of the model's distribution; gray dashed = WVS human entropy.
+      </p>
+
+      <div id="align-wvs7-empty" style="display:none;text-align:center;padding:48px 0;color:var(--text-muted);font-size:13px">
+        No WVS7 alignment data yet — global distributions will be computed once added to wvs7.json.
+      </div>
+      <div id="align-wvs7-charts">
+        <div class="commercial-filter-bar">
+          <span class="type-label" style="font-size:11px">Model:</span>
+          <div id="align-model-group" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+          <span class="type-label" style="font-size:11px;margin-left:10px">Question:</span>
+          <select id="align-question-select" class="search-input" style="width:auto;max-width:440px;padding:6px 10px">
+            <option value="">All questions (aggregated)</option>
+          </select>
+        </div>
+        <div id="align-question-full" style="display:none;font-size:12px;color:#374151;line-height:1.6;background:var(--surface);border-left:3px solid var(--teal);padding:8px 12px;border-radius:0 8px 8px 0;margin-bottom:16px;white-space:pre-wrap"></div>
+
+        <div class="chart-title" id="chart-ws-title">Wasserstein Distance — Mean ± 1 SD</div>
+        <div class="plotly-wrap" id="chart-ws" style="height:380px;margin-bottom:16px"></div>
+        <div class="chart-title" id="chart-ent-title">Shannon Entropy per Wave</div>
+        <div class="plotly-wrap" id="chart-ent" style="height:380px;margin-bottom:28px"></div>
+
+        <div class="chart-title">
+          Void / Unparseable Response Rate per Wave
+          <span class="info-wrap">
+            <button type="button" class="info-dot" id="info-void" aria-label="What counts as void">i</button>
+            <div class="info-popover" id="info-void-popover">A response is "void" when it could not be parsed into a usable answer distribution — the model declined to answer, returned malformed / non-JSON output, or the response was truncated before completion.</div>
+          </span>
+        </div>
+        <div class="plotly-wrap" id="chart-void" style="height:280px"></div>
+      </div>
+    </div>
+
+    <!-- Response Lengths -->
+    <div class="analysis-panel" id="panel-lengths">
+      <p class="section-note">Character count of each model's response to a persona prompt.</p>
+      <div class="chart-title">Response Length Distribution by Condition × Framing</div>
+      <div class="plotly-wrap" id="chart-lengths" style="height:360px"></div>
+    </div>
+
+    <!-- Output Diversity -->
+    <div class="analysis-panel" id="panel-diversity">
+      <p class="section-note">
+        Cosine similarity of each wave's <strong>baseline</strong> persona responses to the time-averaged mean embedding across all waves (MiniLM-L6-v2).
+        High values = responses close to the overall mean; drops signal drift away from the study-wide average.
+      </p>
+      <div id="chart-4a-empty" style="text-align:center;padding:48px 0;color:var(--text-muted);font-size:13px;display:none">
+        Not enough data yet — appears once at least two waves have been collected.
+      </div>
+      <div id="chart-4a-wrap">
+        <div class="chart-title">Baseline Response Stability — Similarity to Time-Averaged Mean</div>
+        <div class="plotly-wrap" id="chart-4a" style="height:calc(100vh - 295px)"></div>
+      </div>
+    </div>
+
+    <!-- Steering Sensitivity: 3 charts side by side -->
+    <div class="analysis-panel" id="panel-steering">
+      <p class="section-note">
+        Cosine similarity between SES-framed responses and matched baseline.
+        <strong>Solid</strong> = system message, <strong>dashed</strong> = inline prompt.
+        <span style="color:var(--teal)">●</span> high SES &nbsp;
+        <span style="color:var(--coral)">●</span> low SES — lower = framing shifts response further from baseline.
+      </p>
+      <div id="chart-4b-empty" style="text-align:center;padding:48px 0;color:var(--text-muted);font-size:13px;display:none">
+        Not enough data yet — appears once at least two waves have been collected.
+      </div>
+      <div id="chart-4b-wrap">
+        <div class="chart-title">Cosine Similarity to Baseline: Framing × SES per Wave</div>
+        <div class="chart-col-label" id="lbl-4b-0"></div>
+        <div class="plotly-wrap" id="chart-4b-0" style="height:320px;margin-bottom:16px"></div>
+        <div class="chart-col-label" id="lbl-4b-1"></div>
+        <div class="plotly-wrap" id="chart-4b-1" style="height:320px;margin-bottom:16px"></div>
+        <div class="chart-col-label" id="lbl-4b-2"></div>
+        <div class="plotly-wrap" id="chart-4b-2" style="height:320px;margin-bottom:16px"></div>
+        <div class="chart-col-label" id="lbl-4b-3"></div>
+        <div class="plotly-wrap" id="chart-4b-3" style="height:320px"></div>
+      </div>
+    </div>
+
+    <!-- Commercial signals -->
+    <div class="analysis-panel" id="panel-commercial">
+      <p class="section-note">
+        Detected via curated regex taxonomies (product/brand names, Google-owned products, marketing "nudge"
+        phrasing). Open-vocabulary heuristics — a sample of commercial signals, not an exhaustive census.
+      </p>
+
+      <div class="commercial-filter-bar">
+        <span class="type-label" style="font-size:11px">Dataset:</span>
+        <select id="commercial-dataset" class="search-input" style="width:auto;padding:6px 10px">
+          <option value="all">All</option>
+          <option value="advertising">Advertising</option>
+          <option value="infinity_chat">Infinity Chat</option>
+          <option value="wvs7">WVS Questions</option>
+          <option value="explorative">Explorative</option>
+        </select>
+        <span class="type-label" style="font-size:11px;margin-left:10px">Condition:</span>
+        <div id="commercial-condition-group" style="display:flex;gap:6px">
+          <button class="page-btn active" data-cond="all">All</button>
+          <button class="page-btn" data-cond="baseline">Baseline</button>
+          <button class="page-btn" data-cond="high_ses">High SES</button>
+          <button class="page-btn" data-cond="low_ses">Low SES</button>
+        </div>
+      </div>
+
+      <!-- Product placements -->
+      <div class="commercial-graph-head">
+        <div class="chart-title" style="margin-top:0">
+          Product Placements per Model per Day
+          <span class="info-wrap">
+            <button type="button" class="info-dot" id="info-placement" aria-label="Which brands are tracked">i</button>
+            <div class="info-popover" id="info-placement-popover">Loading…</div>
+          </span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="page-btn active" data-toggle="placement" data-mode="total">Total</button>
+          <button class="page-btn" data-toggle="placement" data-mode="avg">Avg / response</button>
+        </div>
+      </div>
+      <div class="plotly-wrap" id="chart-placement" style="height:320px;margin-bottom:8px"></div>
+
+      <!-- Google mentions -->
+      <div class="commercial-graph-head">
+        <div class="chart-title" style="margin-top:0">
+          Google Product Mentions per Model per Day
+          <span class="info-wrap">
+            <button type="button" class="info-dot" id="info-google" aria-label="Which Google products are tracked">i</button>
+            <div class="info-popover" id="info-google-popover">Loading…</div>
+          </span>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="page-btn active" data-toggle="google" data-mode="total">Total</button>
+          <button class="page-btn" data-toggle="google" data-mode="avg">Avg / response</button>
+        </div>
+      </div>
+      <div class="plotly-wrap" id="chart-google" style="height:320px;margin-bottom:8px"></div>
+
+      <!-- Nudge table -->
+      <div class="chart-title" style="margin-top:24px">Nudge Category Prevalence (current filter)</div>
+      <div class="table-wrap" id="nudge-table-wrap"></div>
+
+      <!-- Nudge intensity -->
+      <div class="commercial-graph-head">
+        <div class="chart-title" style="margin-top:0">Nudge Intensity per Model per Day</div>
+        <div style="display:flex;gap:6px">
+          <button class="page-btn active" data-toggle="nudge" data-mode="total">Total</button>
+          <button class="page-btn" data-toggle="nudge" data-mode="avg">Avg / response</button>
+        </div>
+      </div>
+      <div class="plotly-wrap" id="chart-nudge" style="height:320px"></div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+<script>
+'use strict';
+
+// ── Palette ────────────────────────────────────────────────────
+const MODEL_CLR = { 'Claude Sonnet':'#e07b54', 'Gemini Pro':'#40ABC9', 'Gemini Flash':'#F4B400', 'GPT Chat':'#34A853' };
+const MODEL_LABELS = { 'Claude Sonnet':'Claude Sonnet', 'Gemini Pro':'Gemini Pro', 'Gemini Flash':'Gemini Flash', 'GPT Chat':'GPT Chat' };
+const MAIN_MODELS  = ['Claude Sonnet','Gemini Pro','Gemini Flash','GPT Chat'];
+const DIST_PALETTE = ['#40ABC9','#34A853','#e07b54','#9b59b6','#e74c3c','#1abc9c','#e67e22','#2c3e50'];
+const EXP_FORMAT_CLR = { best:'#fef3c7', recommendation:'var(--teal-tag)', top_n:'#f3e8ff', how_to:'#d1fae5', creative:'#ffe4e6' };
+const EXP_FORMAT_LABEL = { best:'Best', recommendation:'Recommendation', top_n:'Top N', how_to:'How To', creative:'Creative' };
+
+// ── Hash routing ───────────────────────────────────────────────
+function navigate() {
+  const hash = location.hash.slice(1) || 'home';
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  const page = document.getElementById('page-' + hash);
+  if (page) page.classList.add('active');
+  document.querySelectorAll('[data-nav]').forEach(a =>
+    a.classList.toggle('active', a.dataset.nav === hash)
+  );
+  if (hash === 'analysis') setTimeout(resizeAll, 0);
+}
+window.addEventListener('hashchange', navigate);
+
+// Intercept btn-primary / btn-outline that set data-nav
+document.querySelectorAll('[data-nav]').forEach(el => {
+  if (el.tagName === 'A' && el.href.includes('#')) return; // let <a> navigate naturally
+});
+
+// ── Plotly helpers ─────────────────────────────────────────────
+const CHART_IDS = ['chart-ws','chart-ent','chart-void','chart-output-tokens','chart-truncation','chart-lengths','chart-4a','chart-4b-0','chart-4b-1','chart-4b-2','chart-4b-3','chart-placement','chart-google','chart-nudge'];
+function resizeAll() {
+  CHART_IDS.forEach(id => { const el = document.getElementById(id); if (el && el._fullLayout) Plotly.Plots.resize(el); });
+}
+
+function baseLayout(extra = {}) {
+  return Object.assign({
+    autosize:      true,
+    margin:        { l: 46, r: 12, t: 24, b: 80 },
+    paper_bgcolor: '#FDFDF5',
+    plot_bgcolor:  '#f8f8ef',
+    font:          { family:"'Ubuntu',system-ui,sans-serif", size:11, color:'#374151' },
+    xaxis:         { type:'category', showgrid:false, linecolor:'#d1d5db', linewidth:1,
+                     tickfont:{size:11}, tickangle:-45 },
+    yaxis:         { gridcolor:'#e8e8e1', linecolor:'#d1d5db', linewidth:1, tickfont:{size:11} },
+    legend:        { bgcolor:'transparent', borderwidth:0, font:{size:11} },
+  }, extra);
+}
+const PCFG = { responsive:true, displayModeBar:false };
+
+// ── Data loading ───────────────────────────────────────────────
+async function loadData() {
+  const [mRes, pRes] = await Promise.all([fetch('data/metrics.json'), fetch('data/prompts.json')]);
+  if (!mRes.ok || !pRes.ok) throw new Error('data files missing — run generate_dashboard_data.py first');
+  return { metrics: await mRes.json(), prompts: await pRes.json() };
+}
+
+// ── Charts ─────────────────────────────────────────────────────
+function renderVersions({ wave_versions, waves }) {
+  const byKey = {};
+  for (const r of wave_versions) byKey[`${r.wave}||${r.model}`] = r;
+
+  // Group consecutive waves where NO model changed version or n_calls → one column per stable period
+  const groups = [];
+  let cur = { start: waves[0], end: waves[0], ref: waves[0] };
+  for (let i = 1; i < waves.length; i++) {
+    const w = waves[i], prev = waves[i - 1];
+    const changed = MAIN_MODELS.some(m => {
+      const a = byKey[`${w}||${m}`], b = byKey[`${prev}||${m}`];
+      return (a?.model_used ?? null) !== (b?.model_used ?? null) ||
+             (a?.n_calls   ?? null) !== (b?.n_calls   ?? null);
+    });
+    if (changed) { groups.push(cur); cur = { start: w, end: w, ref: w }; }
+    else           cur.end = w;
+  }
+  groups.push(cur);
+
+  // Header
+  let html = `<div class="table-wrap versions-scroll"><table class="data-table"><thead><tr><th>Model</th>`;
+  for (const g of groups) {
+    const label = g.start === g.end ? g.start : `${g.start} – ${g.end}`;
+    html += `<th>${label}</th>`;
+  }
+  html += `</tr></thead><tbody>`;
+
+  // One row per model
+  for (const model of MAIN_MODELS) {
+    html += `<tr><td><strong>${MODEL_LABELS[model]}</strong></td>`;
+    for (const g of groups) {
+      const r = byKey[`${g.ref}||${model}`];
+      if (!r) { html += `<td style="color:#9ca3af;text-align:center">—</td>`; continue; }
+      const short = (r.model_used || '—').split('/').pop().split(':')[0];
+      html += `<td><span class="badge-teal" title="${r.model_used||''}">${short}</span>
+               <div style="font-size:10px;color:#9ca3af;margin-top:3px">${r.n_calls} calls</div></td>`;
+    }
+    html += `</tr>`;
+  }
+
+  html += `</tbody></table></div>`;
+  document.getElementById('versions-wrap').innerHTML = html;
+}
+
+// ── Value Alignment: model + question filtering ─────────────────
+let _alignAgg = [], _alignByItem = [], _alignItemMeta = {}, _alignVoidRates = [], _alignVoidByItem = [];
+const _alignState = { models: new Set(MAIN_MODELS), question: '' };
+
+function _alignEntropyFromDist(dist) {
+  const s = (dist || []).reduce((a,b) => a+b, 0);
+  if (!s) return null;
+  return -dist.reduce((acc,v) => { const q = v/s; return acc + (q > 0 ? q*Math.log(q) : 0); }, 0);
+}
+
+// Explicit chronological category order — waves aren't always sampled evenly across
+// models/questions, and Plotly's default 'trace' categoryorder mis-sorts the x-axis
+// whenever traces don't all share the exact same set of wave categories.
+function alignXAxis(sortedWaves) {
+  return { type:'category', showgrid:false, linecolor:'#d1d5db', linewidth:1,
+           tickfont:{size:11}, tickangle:-45, categoryorder:'array', categoryarray: sortedWaves };
+}
+
+function initAlignFilters(agg, byItem, voidRates, voidByItem, questionItems) {
+  _alignAgg = agg || [];
+  _alignByItem = byItem || [];
+  _alignVoidRates = voidRates || [];
+  _alignVoidByItem = voidByItem || [];
+  _alignItemMeta = {};
+  (questionItems || []).forEach(it => { _alignItemMeta[it.item_id] = it; });
+
+  const chipWrap = document.getElementById('align-model-group');
+  chipWrap.innerHTML = MAIN_MODELS.map(m => `<button class="page-btn active" data-align-model="${m}">
+    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${MODEL_CLR[m]};margin-right:5px;vertical-align:middle"></span>${MODEL_LABELS[m]}</button>`
+  ).join('');
+  chipWrap.querySelectorAll('[data-align-model]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const model = btn.dataset.alignModel;
+      if (_alignState.models.has(model)) {
+        if (_alignState.models.size === 1) return; // keep at least one model visible
+        _alignState.models.delete(model);
+        btn.classList.remove('active');
+      } else {
+        _alignState.models.add(model);
+        btn.classList.add('active');
+      }
+      renderWVSCharts();
+    });
+  });
+
+  const sel = document.getElementById('align-question-select');
+  const opts = (questionItems || []).map(it => {
+    const label = (it.question || it.item_id).replace(/\s+/g, ' ').trim();
+    return `<option value="${esc(it.item_id)}">${esc(label)}</option>`;
+  });
+  sel.innerHTML = `<option value="">All questions (aggregated)</option>` + opts.join('');
+  sel.addEventListener('change', () => {
+    _alignState.question = sel.value;
+    renderWVSCharts();
+  });
+
+  renderWVSCharts();
+}
+
+function renderWVSCharts() {
+  const models = MAIN_MODELS.filter(m => _alignState.models.has(m));
+  const qid = _alignState.question;
+
+  const wsTitle  = document.getElementById('chart-ws-title');
+  const entTitle = document.getElementById('chart-ent-title');
+  const fullBox  = document.getElementById('align-question-full');
+
+  let wsTraces, entTraces, sortedWaves;
+
+  if (!qid) {
+    fullBox.style.display = 'none';
+    wsTitle.textContent  = 'Wasserstein Distance — Mean ± repeat SD (10× runs)';
+    entTitle.textContent = 'Shannon Entropy per Wave';
+
+    sortedWaves = [...new Set(_alignAgg.map(r=>r.wave))].sort();
+
+    const mk = (yKey, errKey) => models.map(model => {
+      const d = _alignAgg.filter(r => r.model === model).sort((a,b) => a.wave < b.wave ? -1 : 1);
+      return {
+        x: d.map(r=>r.wave), y: d.map(r=>r[yKey]),
+        error_y: { type:'data', array:d.map(r=>r[errKey]), visible:true, thickness:1.5, width:4, color:MODEL_CLR[model]+'99' },
+        mode:'lines+markers', name:MODEL_LABELS[model],
+        line:{color:MODEL_CLR[model],width:2.5}, marker:{size:6,color:MODEL_CLR[model]},
+      };
+    });
+    wsTraces = mk('ws_mean','ws_repeat_std');
+
+    entTraces = models.map(model => {
+      const d = _alignAgg.filter(r => r.model === model).sort((a,b) => a.wave < b.wave ? -1 : 1);
+      return { x:d.map(r=>r.wave), y:d.map(r=>r.entropy_mean), mode:'lines+markers', name:MODEL_LABELS[model],
+               line:{color:MODEL_CLR[model],width:2.5}, marker:{size:6,color:MODEL_CLR[model]} };
+    });
+    const ref = _alignAgg.filter(r => r.model === models[0]).sort((a,b) => a.wave<b.wave?-1:1);
+    if (ref.length) entTraces.push({ x:ref.map(r=>r.wave), y:ref.map(r=>r.entropy_global_mean),
+      mode:'lines', name:'WVS human', line:{color:'#d1d5db',dash:'dash',width:1.5} });
+  } else {
+    const meta = _alignItemMeta[qid];
+    const qLabel = meta ? (meta.question || qid).replace(/\s+/g, ' ').trim() : qid;
+    wsTitle.textContent  = `Wasserstein Distance per Wave — ${qid}`;
+    entTitle.textContent = `Shannon Entropy per Wave — ${qid}`;
+
+    const rows = _alignByItem.filter(r => r[2] === qid);
+    const voidRowsQ = _alignVoidByItem.filter(r => r[2] === qid);
+    const totalQ = rows.length + voidRowsQ.length;
+    const voidPct = totalQ ? Math.round(1000 * voidRowsQ.length / totalQ) / 10 : 0;
+    fullBox.innerHTML = `${esc(qLabel)}<div style="margin-top:6px;font-size:11px;color:'#6b7280'}">`;
+    fullBox.style.display = 'block';
+
+    sortedWaves = [...new Set(rows.map(r=>r[0]))].sort();
+
+    wsTraces = models.map(model => {
+      const d = rows.filter(r=>r[1]===model).sort((a,b)=> a[0]<b[0]?-1:1);
+      return { x:d.map(r=>r[0]), y:d.map(r=>r[3]), mode:'lines+markers', name:MODEL_LABELS[model],
+               line:{color:MODEL_CLR[model],width:2.5}, marker:{size:6,color:MODEL_CLR[model]} };
+    });
+    entTraces = models.map(model => {
+      const d = rows.filter(r=>r[1]===model).sort((a,b)=> a[0]<b[0]?-1:1);
+      return { x:d.map(r=>r[0]), y:d.map(r=>r[4]), mode:'lines+markers', name:MODEL_LABELS[model],
+               line:{color:MODEL_CLR[model],width:2.5}, marker:{size:6,color:MODEL_CLR[model]} };
+    });
+    const gEnt = meta ? _alignEntropyFromDist(meta.global_distribution) : null;
+    if (gEnt != null && sortedWaves.length) {
+      entTraces.push({ x:sortedWaves, y:sortedWaves.map(()=>gEnt), mode:'lines', name:'WVS human',
+                       line:{color:'#d1d5db',dash:'dash',width:1.5} });
+    }
+  }
+
+  Plotly.newPlot('chart-ws', wsTraces,
+    baseLayout({ xaxis: alignXAxis(sortedWaves), yaxis:{title:'Wasserstein Dist.',gridcolor:'#e8e8e1'} }), PCFG);
+  Plotly.newPlot('chart-ent', entTraces,
+    baseLayout({ xaxis: alignXAxis(sortedWaves), yaxis:{title:'Shannon Entropy (nats)',gridcolor:'#e8e8e1'} }), PCFG);
+
+  renderAlignVoidChart(models);
+}
+
+// Void-response rate is always shown in aggregate (per wave/model), independent of the
+// question filter — with n=1 sample per question per wave/model a per-question rate is
+// just 0% or 100%, so it's surfaced instead as a count next to the question text above.
+function renderAlignVoidChart(models) {
+  const sortedWaves = [...new Set(_alignVoidRates.map(r=>r.wave))].sort();
+  const traces = models.map(model => {
+    const d = _alignVoidRates.filter(r => r.model === model).sort((a,b) => a.wave < b.wave ? -1 : 1);
+    return {
+      x: d.map(r=>r.wave), y: d.map(r => r.total_n ? round2(100 * r.void_n / r.total_n) : 0),
+      mode:'lines+markers', name:MODEL_LABELS[model],
+      line:{color:MODEL_CLR[model],width:2.5}, marker:{size:6,color:MODEL_CLR[model]},
+    };
+  });
+  Plotly.newPlot('chart-void', traces,
+    baseLayout({ xaxis: alignXAxis(sortedWaves), yaxis:{title:'Void (%)',gridcolor:'#e8e8e1',rangemode:'tozero'} }), PCFG);
+}
+
+function renderLengths(response_lengths) {
+  const groups = [
+    {label:'Baseline',         cond:'baseline',framing:null,           color:'#6366f1'},
+    {label:'High SES / sys',   cond:'high_ses',framing:'system_msg',   color:'#40ABC9'},
+    {label:'High SES / inline',cond:'high_ses',framing:'inline_prompt',color:'#6ee7b7'},
+    {label:'Low SES / sys',    cond:'low_ses', framing:'system_msg',   color:'#E57657'},
+    {label:'Low SES / inline', cond:'low_ses', framing:'inline_prompt',color:'#fca5a5'},
+  ];
+  Plotly.newPlot('chart-lengths',
+    groups.map(g => ({
+      type:'box',
+      y:response_lengths.filter(d=>d.condition===g.cond&&(g.framing===null||d.framing===g.framing)).map(d=>d.response_len),
+      name:g.label, boxpoints:'outliers',
+      marker:{color:g.color,size:3,opacity:.7}, line:{color:g.color}, fillcolor:g.color+'44',
+    })),
+    baseLayout({ yaxis:{title:'Characters',gridcolor:'#e8e8e1'}, showlegend:false }), PCFG);
+}
+
+function renderOutputTokens(truncation_rates) {
+  if (!truncation_rates?.length) return;
+  const sortedWaves = [...new Set(truncation_rates.filter(r => r.output_tokens_mean != null).map(r=>r.wave))].sort();
+  const traces = MAIN_MODELS.map(model => {
+    const d = truncation_rates.filter(r => r.model === model && r.output_tokens_mean != null)
+                              .sort((a,b) => a.wave < b.wave ? -1 : 1);
+    if (!d.length) return null;
+    return {
+      x: d.map(r => r.wave),
+      y: d.map(r => r.output_tokens_mean),
+      mode: 'lines+markers', name: MODEL_LABELS[model],
+      line: {color: MODEL_CLR[model], width: 2.5}, marker: {size: 6, color: MODEL_CLR[model]},
+    };
+  }).filter(Boolean);
+  Plotly.newPlot('chart-output-tokens', traces,
+    baseLayout({ xaxis: alignXAxis(sortedWaves), yaxis: {title: 'Mean output tokens', gridcolor: '#e8e8e1', rangemode: 'tozero'} }), PCFG);
+}
+
+function renderTruncation(truncation_rates) {
+  if (!truncation_rates?.length) return;
+
+  // Line chart: truncation % per wave per model
+  const sortedWaves = [...new Set(truncation_rates.map(r=>r.wave))].sort();
+  const traces = MAIN_MODELS.map(model => {
+    const d = truncation_rates.filter(r => r.model === model).sort((a,b) => a.wave < b.wave ? -1 : 1);
+    return {
+      x: d.map(r => r.wave),
+      y: d.map(r => r.total ? round2(100 * r.truncated / r.total) : 0),
+      mode: 'lines+markers', name: MODEL_LABELS[model],
+      line: {color: MODEL_CLR[model], width: 2.5}, marker: {size: 6, color: MODEL_CLR[model]},
+    };
+  });
+  Plotly.newPlot('chart-truncation', traces,
+    baseLayout({ xaxis: alignXAxis(sortedWaves), yaxis: {title: 'Truncated (%)', gridcolor: '#e8e8e1', rangemode: 'tozero'} }), PCFG);
+
+  // Summary table: latest wave per model
+  const latest = {};
+  for (const r of truncation_rates) {
+    if (!latest[r.model] || r.wave > latest[r.model].wave) latest[r.model] = r;
+  }
+  const rows = MAIN_MODELS.map(model => {
+    const r = latest[model];
+    if (!r) return '';
+    const pct = r.total ? round2(100 * r.truncated / r.total) : 0;
+    const color = pct >= 20 ? '#c62828' : (pct >= 5 ? '#e65100' : '#2e7d32');
+    return `<tr>
+      <td style="padding:5px 12px">${MODEL_LABELS[model]}</td>
+      <td style="padding:5px 12px;text-align:center">${r.total}</td>
+      <td style="padding:5px 12px;text-align:center;color:${color}"><b>${r.truncated}</b></td>
+      <td style="padding:5px 12px;text-align:center;color:${color}">${pct}%</td>
+      <td style="padding:5px 12px;color:#999;font-size:12px">${r.wave}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('truncation-table').innerHTML = `
+    <div class="table-wrap" style="margin-top:8px">
+      <table class="data-table">
+        <thead><tr>
+          <th style="text-align:left">Model</th>
+          <th>Calls</th><th>Truncated</th><th>Rate</th><th style="text-align:left">Latest wave</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+
+function round2(x) { return Math.round(x * 100) / 100; }
+
+// ── Commercial signals ──────────────────────────────────────────
+let _commercialTimeseries = [], _commercialNudgeTable = [], _nudgeCategoryTerms = {};
+let _commercialDataset = 'all', _commercialCondition = 'all';
+let _commercialMode = { placement: 'total', google: 'total', nudge: 'total' };
+
+function filterCommercial(rows) {
+  return rows.filter(d =>
+    (_commercialDataset === 'all' || d.dataset === _commercialDataset) &&
+    (_commercialCondition === 'all' || d.condition === _commercialCondition)
+  );
+}
+
+function renderCommercialSeries(chartId, sumKey, mode) {
+  const filtered = filterCommercial(_commercialTimeseries);
+  const sortedWaves = [...new Set(filtered.map(d=>d.wave))].sort();
+  const traces = MAIN_MODELS.map(model => {
+    const acc = {};
+    for (const d of filtered) {
+      if (d.model !== model) continue;
+      if (!acc[d.wave]) acc[d.wave] = { n: 0, sum: 0 };
+      acc[d.wave].n   += d.n;
+      acc[d.wave].sum += d[sumKey];
+    }
+    const waves = Object.keys(acc).sort();
+    if (!waves.length) return null;
+    return {
+      x: waves,
+      y: waves.map(w => mode === 'avg' ? (acc[w].n ? acc[w].sum / acc[w].n : 0) : acc[w].sum),
+      mode: 'lines+markers', name: MODEL_LABELS[model],
+      line: {color: MODEL_CLR[model], width: 2.5}, marker: {size: 6, color: MODEL_CLR[model]},
+    };
+  }).filter(Boolean);
+  Plotly.newPlot(chartId, traces,
+    baseLayout({ xaxis: alignXAxis(sortedWaves), yaxis: {title: mode === 'avg' ? 'Mean per response' : 'Total events', gridcolor: '#e8e8e1', rangemode: 'tozero'} }), PCFG);
+}
+
+function renderNudgeTable() {
+  const filtered = filterCommercial(_commercialNudgeTable);
+  const acc = {};
+  for (const d of filtered) {
+    if (!acc[d.category]) acc[d.category] = { n: 0, hit: 0 };
+    acc[d.category].n   += d.n;
+    acc[d.category].hit += d.hit_responses;
+  }
+  const rows = Object.entries(acc)
+    .map(([cat, v]) => ({ cat, rate: v.n ? 100 * v.hit / v.n : 0 }))
+    .sort((a, b) => b.rate - a.rate);
+  const body = rows.map(r => `
+    <tr>
+      <td style="text-transform:capitalize">${r.cat.replace(/_/g, ' ')}</td>
+      <td style="font-size:11.5px;color:#4b5563">${(_nudgeCategoryTerms[r.cat] || []).join(', ')}</td>
+      <td style="text-align:center;white-space:nowrap">${round2(r.rate)}%</td>
+    </tr>`).join('');
+  document.getElementById('nudge-table-wrap').innerHTML = `
+    <table class="data-table">
+      <thead><tr><th style="text-align:left">Category</th><th style="text-align:left">Terms</th><th>Hit rate</th></tr></thead>
+      <tbody>${body}</tbody>
+    </table>`;
+}
+
+function renderAllCommercial() {
+  renderCommercialSeries('chart-placement', 'placement_sum', _commercialMode.placement);
+  renderCommercialSeries('chart-google',    'google_sum',    _commercialMode.google);
+  renderNudgeTable();
+  renderCommercialSeries('chart-nudge', 'nudge_sum', _commercialMode.nudge);
+}
+
+document.getElementById('commercial-dataset').addEventListener('change', function() {
+  _commercialDataset = this.value;
+  const disable = (_commercialDataset === 'wvs7' || _commercialDataset === 'explorative');
+  document.querySelectorAll('#commercial-condition-group [data-cond]').forEach(b => {
+    b.disabled = disable && b.dataset.cond !== 'all';
+  });
+  if (disable) {
+    _commercialCondition = 'all';
+    document.querySelectorAll('#commercial-condition-group [data-cond]').forEach(b =>
+      b.classList.toggle('active', b.dataset.cond === 'all'));
+  }
+  renderAllCommercial();
+});
+
+document.querySelectorAll('#commercial-condition-group [data-cond]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (btn.disabled) return;
+    document.querySelectorAll('#commercial-condition-group [data-cond]').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    _commercialCondition = btn.dataset.cond;
+    renderAllCommercial();
+  });
+});
+
+document.querySelectorAll('[data-toggle]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const key = btn.dataset.toggle;
+    document.querySelectorAll(`[data-toggle="${key}"]`).forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    _commercialMode[key] = btn.dataset.mode;
+    if (key === 'placement') renderCommercialSeries('chart-placement', 'placement_sum', _commercialMode.placement);
+    else if (key === 'google') renderCommercialSeries('chart-google', 'google_sum', _commercialMode.google);
+    else if (key === 'nudge')  renderCommercialSeries('chart-nudge', 'nudge_sum', _commercialMode.nudge);
+  });
+});
+
+// ── Info-bubble popovers (click to open, click elsewhere to close) ─────
+document.querySelectorAll('.info-dot').forEach(dot => {
+  dot.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const popover = dot.nextElementSibling;
+    const wasOpen = popover.classList.contains('open');
+    document.querySelectorAll('.info-popover.open').forEach(p => p.classList.remove('open'));
+    if (wasOpen) return;
+    popover.classList.add('open');
+    const margin = 10;
+    const rect = dot.getBoundingClientRect();
+    let left = rect.left;
+    const maxLeft = window.innerWidth - popover.offsetWidth - margin;
+    if (left > maxLeft) left = Math.max(margin, maxLeft);
+    popover.style.left = left + 'px';
+    popover.style.top  = (rect.bottom + 6) + 'px';
+  });
+});
+document.addEventListener('click', () => {
+  document.querySelectorAll('.info-popover.open').forEach(p => p.classList.remove('open'));
+});
+
+function renderCosine4a(cosine_4a) {
+  const sortedWaves = [...new Set(cosine_4a.map(r=>r.wave))].sort();
+  Plotly.newPlot('chart-4a',
+    MAIN_MODELS.map(model => {
+      const d = cosine_4a.filter(r=>r.model===model).sort((a,b)=>a.wave<b.wave?-1:1);
+      return { x:d.map(r=>r.wave), y:d.map(r=>r.sim_mean),
+               error_y:{type:'data',array:d.map(r=>r.sim_std),visible:true,thickness:1.5,width:4,color:MODEL_CLR[model]+'99'},
+               mode:'lines+markers', name:MODEL_LABELS[model],
+               line:{color:MODEL_CLR[model],width:2.5}, marker:{size:6,color:MODEL_CLR[model]} };
+    }),
+    baseLayout({ yaxis:{range:[0,1],title:'Mean Cosine Similarity',gridcolor:'#e8e8e1'}, xaxis:{...alignXAxis(sortedWaves), title:'Wave'} }), PCFG);
+}
+
+function renderCosine4b(cosine_4b_ii) {
+  const SES_CLR={high:'#40ABC9',low:'#E57657'};
+  const FD={system_msg:'solid',inline_prompt:'dash'};
+  const FS={system_msg:'circle',inline_prompt:'diamond'};
+  MAIN_MODELS.forEach((model,i) => {
+    document.getElementById(`lbl-4b-${i}`).textContent = MODEL_LABELS[model];
+    const sortedWaves = [...new Set(cosine_4b_ii.filter(r=>r.model===model).map(r=>r.wave))].sort();
+    const traces=[];
+    for (const f of ['system_msg','inline_prompt']) for (const s of ['high','low']) {
+      const d = cosine_4b_ii.filter(r=>r.model===model&&r.framing===f&&r.ses===s).sort((a,b)=>a.wave<b.wave?-1:1);
+      if (!d.length) continue;
+      traces.push({ x:d.map(r=>r.wave), y:d.map(r=>r.sim_mean),
+        error_y:{type:'data',array:d.map(r=>r.sim_std),visible:true,thickness:1,width:3,color:SES_CLR[s]+'66'},
+        mode:'lines+markers', name:`${s} SES/${f.replace('_',' ')}`,
+        line:{color:SES_CLR[s],dash:FD[f],width:2}, marker:{size:5,color:SES_CLR[s],symbol:FS[f]}, showlegend:false });
+    }
+    Plotly.newPlot(`chart-4b-${i}`, traces,
+      baseLayout({ xaxis: alignXAxis(sortedWaves), yaxis:{range:[0,1],title:'Cosine Similarity',gridcolor:'#e8e8e1'} }), PCFG);
+  });
+}
+
+// ── WVS table ──────────────────────────────────────────────────
+let _wvsAll=[], _wvsFiltered=[], _wvsPage=0;
+const WVS_PP=20;
+
+function renderWVS(q='') {
+  _wvsFiltered = _wvsAll.filter(d=>!q||d.question.toLowerCase().includes(q));
+  const total=_wvsFiltered.length, start=_wvsPage*WVS_PP;
+  document.getElementById('wvs-total').textContent=total;
+  document.getElementById('wvs-range').textContent=total?`${start+1}–${Math.min(start+WVS_PP,total)}`:'0';
+  document.getElementById('wvs-tbody').innerHTML = _wvsFiltered.slice(start,start+WVS_PP).map((item,j)=>{
+    const n=start+j+1;
+    const opts=item.options.map((o,i)=>
+      `<span style="color:${DIST_PALETTE[i%DIST_PALETTE.length]}">${String.fromCharCode(65+i)}.</span> ${o}`
+    ).join('<br>');
+    const hasDist = Array.isArray(item.global_distribution) && item.global_distribution.length > 0;
+    const bar = hasDist ? item.options.map((o,i)=>{
+      const pct=Math.round((item.global_distribution[i]||0)*1000)/10;
+      return `<div style="width:${pct}%;background:${DIST_PALETTE[i%DIST_PALETTE.length]}" title="${String.fromCharCode(65+i)}: ${pct}%"></div>`;
+    }).join('') : '';
+    const leg = hasDist ? item.options.map((o,i)=>{
+      const pct=Math.round((item.global_distribution[i]||0)*1000)/10;
+      return `<span style="color:${DIST_PALETTE[i%DIST_PALETTE.length]}">${String.fromCharCode(65+i)}:${pct}%</span>`;
+    }).join(' ') : '<span style="color:#9ca3af;font-size:10px">pending</span>';
+    return `<tr>
+      <td style="color:#9ca3af;font-size:11px">${n}</td>
+      <td style="max-width:380px">${item.question.replace(/\n/g,'<br>')}</td>
+      <td style="font-size:11px;line-height:1.6">${opts}</td>
+      <td><div class="dist-bar">${bar}</div><div class="dist-legend">${leg}</div></td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Open-ended prompt rows ─────────────────────────────────────
+let _personaAll=[], _personaFiltered=[], _personaPage=0, _personaSrc='all';
+const PERSONA_PP=25;
+
+function srcBadge(src) {
+  return src==='advertising'
+    ? `<span class="tag tag-adv">Advertising</span>`
+    : `<span class="tag tag-inf">Infinity Chat</span>`;
+}
+
+function renderPersonaRows(q='') {
+  _personaFiltered = _personaAll.filter(d=>
+    (_personaSrc==='all'||d.query_source===_personaSrc) &&
+    (!q||(d.baseline?.prompt_text||'').toLowerCase().includes(q))
+  );
+  const total=_personaFiltered.length, start=_personaPage*PERSONA_PP;
+  document.getElementById('persona-total').textContent=total;
+  document.getElementById('persona-range').textContent=total?`${start+1}–${Math.min(start+PERSONA_PP,total)}`:'0';
+
+  // Render one framing variant block (no persona_role label)
+  function framingBlock(e, sesClass) {
+    if (!e) return '';
+    if (e.framing === 'system_msg') {
+      const sysText  = (e.system_text || e.persona_text || '').trim();
+      const userText = (e.prompt_text || '').trim();
+      return `<div>
+        <div class="framing-type">System message</div>
+        <div class="framing-block">${esc(sysText)}</div>
+        ${userText ? `<div class="framing-inline" style="margin-top:6px">${esc(userText)}</div>` : ''}
+      </div>`;
+    } else {
+      // Inline: prompt_text already contains persona + query combined
+      const text = (e.prompt_text || '').trim();
+      return `<div>
+        <div class="framing-type">Inline</div>
+        <div class="framing-inline">${esc(text)}</div>
+      </div>`;
+    }
+  }
+
+  // Render all framing variants for one SES level
+  function sesSection(variants, sesClass, label) {
+    if (!variants || variants.length === 0) return '';
+    const sys    = variants.find(e => e.framing === 'system_msg');
+    const inline = variants.find(e => e.framing === 'inline_prompt');
+    const blocks = [framingBlock(sys, sesClass), framingBlock(inline, sesClass)].filter(Boolean).join('');
+    return `<div class="ses-section ${sesClass}">
+      <div class="ses-label ${sesClass}">${label}</div>
+      ${blocks}
+    </div>`;
+  }
+
+  document.getElementById('persona-rows').innerHTML = _personaFiltered.slice(start,start+PERSONA_PP).map(entry=>{
+    const query = (entry.baseline?.prompt_text||'').trim();
+    return `<div class="prompt-row">
+      <div class="row-header">
+        ${srcBadge(entry.query_source)}
+        <span class="row-query">${esc(query)}</span>
+      </div>
+      ${sesSection(entry.high_ses, 'high', 'High SES')}
+      ${sesSection(entry.low_ses,  'low',  'Low SES')}
+    </div>`;
+  }).join('');
+}
+
+// ── Explorative prompt table ───────────────────────────────────
+let _explorativeAll=[], _explorativeFiltered=[], _explorativePage=0, _explorativeFmt='all';
+const EXPLORATIVE_PP=25;
+
+function renderExplorative(q='') {
+  _explorativeFiltered = _explorativeAll.filter(d=>
+    (_explorativeFmt==='all' || d.format===_explorativeFmt) &&
+    (!q || d.prompt.toLowerCase().includes(q))
+  );
+  const total=_explorativeFiltered.length, start=_explorativePage*EXPLORATIVE_PP;
+  document.getElementById('explorative-total').textContent=total;
+  document.getElementById('explorative-range').textContent=total?`${start+1}–${Math.min(start+EXPLORATIVE_PP,total)}`:'0';
+  const topicFmt = t => t ? t.replace(/_/g,' ') : '—';
+  document.getElementById('explorative-tbody').innerHTML = _explorativeFiltered.slice(start,start+EXPLORATIVE_PP).map((item,j)=>{
+    const n=start+j+1;
+    const fmtClr = EXP_FORMAT_CLR[item.format] || 'var(--gray-tag)';
+    const fmtLbl = EXP_FORMAT_LABEL[item.format] || item.format;
+    return `<tr>
+      <td style="color:#9ca3af;font-size:11px">${n}</td>
+      <td style="font-size:12px">${esc(topicFmt(item.topic))}</td>
+      <td><span class="tag" style="background:${fmtClr};color:#374151">${esc(fmtLbl)}</span></td>
+      <td style="font-weight:500">${esc(item.prompt)}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ── Type of prompt switching (Overview page) ───────────────────
+let _activePromptType='openended';
+document.querySelectorAll('[data-prompt]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('[data-prompt]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    _activePromptType=btn.dataset.prompt;
+    const isOpen=_activePromptType==='openended';
+    const isWvs=_activePromptType==='wvs';
+    const isExp=_activePromptType==='explorative';
+    document.getElementById('sub-openended').style.display=isOpen?'':'none';
+    document.getElementById('sub-wvs').style.display=isWvs?'':'none';
+    document.getElementById('sub-explorative').style.display=isExp?'':'none';
+    document.getElementById('src-section').style.display=isOpen?'':'none';
+    document.getElementById('persona-pager').style.display=isOpen?'':'none';
+    document.getElementById('wvs-pager').style.display=isWvs?'':'none';
+    document.getElementById('explorative-format-section').style.display=isExp?'':'none';
+    document.getElementById('explorative-pager').style.display=isExp?'':'none';
+    document.getElementById('prompt-search').placeholder=isWvs?'Search questions…':'Search prompts…';
+  });
+});
+
+// ── Analysis sub-tab switching ─────────────────────────────────
+document.querySelectorAll('[data-analysis]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('[data-analysis]').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.analysis-panel').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('panel-'+btn.dataset.analysis).classList.add('active');
+    setTimeout(resizeAll, 0);
+  });
+});
+
+window.addEventListener('resize', ()=>{ if(document.querySelector('#page-analysis.active')) resizeAll(); });
+
+// ── Explorative format filter ──────────────────────────────────
+document.querySelectorAll('[data-efmt]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('[data-efmt]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    _explorativeFmt=btn.dataset.efmt;
+    _explorativePage=0;
+    renderExplorative(document.getElementById('prompt-search').value.toLowerCase());
+  });
+});
+
+// ── Shared search ──────────────────────────────────────────────
+document.getElementById('prompt-search').addEventListener('input',function(){
+  const q=this.value.toLowerCase();
+  if (_activePromptType==='openended'){_personaPage=0;renderPersonaRows(q);}
+  else if (_activePromptType==='explorative'){_explorativePage=0;renderExplorative(q);}
+  else {_wvsPage=0;renderWVS(q);}
+});
+
+// ── Source filter ──────────────────────────────────────────────
+document.querySelectorAll('[data-src]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('[data-src]').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    _personaSrc=btn.dataset.src;
+    _personaPage=0;
+    renderPersonaRows(document.getElementById('prompt-search').value.toLowerCase());
+  });
+});
+
+// ── Pagination ─────────────────────────────────────────────────
+const q=()=>document.getElementById('prompt-search').value.toLowerCase();
+document.getElementById('persona-prev').addEventListener('click',()=>{if(_personaPage>0){_personaPage--;renderPersonaRows(q());}});
+document.getElementById('persona-next').addEventListener('click',()=>{if((_personaPage+1)*PERSONA_PP<_personaFiltered.length){_personaPage++;renderPersonaRows(q());}});
+document.getElementById('wvs-prev').addEventListener('click',()=>{if(_wvsPage>0){_wvsPage--;renderWVS(q());}});
+document.getElementById('wvs-next').addEventListener('click',()=>{if((_wvsPage+1)*WVS_PP<_wvsFiltered.length){_wvsPage++;renderWVS(q());}});
+document.getElementById('explorative-prev').addEventListener('click',()=>{if(_explorativePage>0){_explorativePage--;renderExplorative(q());}});
+document.getElementById('explorative-next').addEventListener('click',()=>{if((_explorativePage+1)*EXPLORATIVE_PP<_explorativeFiltered.length){_explorativePage++;renderExplorative(q());}});
+
+// ── Escape util ────────────────────────────────────────────────
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ── Stat card clicks ───────────────────────────────────────────
+function closeAllPanels() {
+  document.querySelectorAll('.wave-detail-panel').forEach(p => p.classList.remove('open'));
+  document.querySelectorAll('.stat-box').forEach(b => b.classList.remove('active'));
+}
+
+function renderWaveRows(truncation_rates, wave_versions, waves) {
+  const byKey = {};
+  for (const r of (wave_versions||[])) byKey[`${r.wave}||${r.model}`] = r;
+  const totals = {};
+  for (const r of (truncation_rates||[])) {
+    if (!totals[r.wave]) totals[r.wave] = {};
+    totals[r.wave][r.model] = r;
+  }
+  const models = MAIN_MODELS.filter(m => waves.some(w => totals[w]?.[m]));
+  const colW = `grid-template-columns: 110px ${models.map(()=>'1fr').join(' ')}`;
+  let html = `<div class="wave-row header" style="${colW}">
+    <div>Date</div>${models.map(m=>`<div>${MODEL_LABELS[m]}</div>`).join('')}
+  </div>`;
+  for (const w of [...waves].reverse()) {
+    const cells = models.map(m => {
+      const t = totals[w]?.[m];
+      const v = byKey[`${w}||${m}`];
+      if (!t) return `<div class="wave-cell">—</div>`;
+      const ver = (v?.model_used||'').split('/').pop().split(':')[0];
+      return `<div class="wave-cell">
+        <strong>${t.total}</strong> calls
+        ${t.output_tokens_mean != null ? `· <span style="color:var(--text-light)">${t.output_tokens_mean} tok</span>` : ''}
+        ${ver ? `<div class="ver">${ver}</div>` : ''}
+      </div>`;
+    }).join('');
+    html += `<div class="wave-row" style="${colW}"><div class="wave-date">${w}</div>${cells}</div>`;
+  }
+  document.getElementById('wave-rows').innerHTML = html;
+}
+
+function renderModelsRows(wave_versions, waves) {
+  const latest = {};
+  for (const r of (wave_versions||[])) {
+    if (!latest[r.model] || r.wave > latest[r.model].wave) latest[r.model] = r;
+  }
+  const colW = 'grid-template-columns: 140px 1fr 80px';
+  let html = `<div class="wave-row header" style="${colW}">
+    <div>Model</div><div>Latest Version</div><div>Calls</div>
+  </div>`;
+  for (const m of MAIN_MODELS) {
+    const r = latest[m];
+    html += `<div class="wave-row" style="${colW}">
+      <div class="wave-date">${MODEL_LABELS[m]}</div>
+      <div class="wave-cell">${r ? `<span class="badge-teal">${(r.model_used||'—').split('/').pop()}</span>` : '—'}</div>
+      <div class="wave-cell">${r ? r.n_calls : '—'}</div>
+    </div>`;
+  }
+  document.getElementById('models-rows').innerHTML = html;
+}
+
+function initStatCards(metrics) {
+  document.getElementById('card-waves').addEventListener('click', () => {
+    const panel = document.getElementById('wave-detail-panel');
+    const wasOpen = panel.classList.contains('open');
+    closeAllPanels();
+    if (!wasOpen) {
+      renderWaveRows(metrics.truncation_rates, metrics.wave_versions, metrics.waves||[]);
+      panel.classList.add('open');
+      document.getElementById('card-waves').classList.add('active');
+      panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    }
+  });
+  document.getElementById('card-models').addEventListener('click', () => {
+    const panel = document.getElementById('models-detail-panel');
+    const wasOpen = panel.classList.contains('open');
+    closeAllPanels();
+    if (!wasOpen) {
+      renderModelsRows(metrics.wave_versions, metrics.waves||[]);
+      panel.classList.add('open');
+      document.getElementById('card-models').classList.add('active');
+      panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    }
+  });
+  document.getElementById('card-wvs').addEventListener('click', () => {
+    closeAllPanels();
+    document.querySelector('[data-prompt="wvs"]').click();
+    document.getElementById('sub-wvs').scrollIntoView({ behavior:'smooth', block:'start' });
+  });
+  document.getElementById('card-persona').addEventListener('click', () => {
+    closeAllPanels();
+    document.querySelector('[data-prompt="openended"]').click();
+    document.getElementById('sub-openended').scrollIntoView({ behavior:'smooth', block:'start' });
+  });
+  document.getElementById('card-explorative').addEventListener('click', () => {
+    closeAllPanels();
+    document.querySelector('[data-prompt="explorative"]').click();
+    document.getElementById('sub-explorative').scrollIntoView({ behavior:'smooth', block:'start' });
+  });
+  document.getElementById('wave-detail-close').addEventListener('click', closeAllPanels);
+  document.getElementById('models-detail-close').addEventListener('click', closeAllPanels);
+}
+
+// ── Boot ───────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',async()=>{
+  navigate(); // show correct page on load
+
+  try {
+    const {metrics,prompts}=await loadData();
+
+    const updated=metrics.generated;
+    document.querySelectorAll('.nav-date').forEach(el=>el.textContent=`Updated: ${updated}`);
+    document.getElementById('stat-waves').textContent=metrics.waves?.length??'—';
+    document.getElementById('stat-wvs').textContent=prompts.wvs?.length??'—';
+    document.getElementById('stat-persona').textContent=prompts.persona?.length??'—';
+    document.getElementById('stat-explorative').textContent=prompts.explorative?.length??'—';
+
+    initStatCards(metrics);
+    renderVersions(metrics);
+
+    if (metrics.wvs_metrics?.length) {
+      initAlignFilters(metrics.wvs_metrics, metrics.wvs_by_item, metrics.wvs_void_rates, metrics.wvs_void_by_item, prompts.wvs);
+    } else {
+      document.getElementById('align-wvs7-charts').style.display = 'none';
+      document.getElementById('align-wvs7-empty').style.display  = 'block';
+    }
+
+    renderLengths(metrics.response_lengths);
+    renderOutputTokens(metrics.truncation_rates);
+    renderTruncation(metrics.truncation_rates);
+
+    if (metrics.cosine_4a?.length) { renderCosine4a(metrics.cosine_4a); }
+    else { document.getElementById('chart-4a-wrap').style.display='none'; document.getElementById('chart-4a-empty').style.display='block'; }
+
+    if (metrics.cosine_4b_ii?.length) { renderCosine4b(metrics.cosine_4b_ii); }
+    else { document.getElementById('chart-4b-wrap').style.display='none'; document.getElementById('chart-4b-empty').style.display='block'; }
+
+    _commercialTimeseries = metrics.commercial_timeseries || [];
+    _commercialNudgeTable = metrics.commercial_nudge_table || [];
+    _nudgeCategoryTerms = metrics.nudge_category_terms || {};
+    document.getElementById('info-placement-popover').textContent =
+      'Brands/products tracked: ' + (metrics.product_placement_names || []).join(', ');
+    document.getElementById('info-google-popover').textContent =
+      'Google products tracked: ' + (metrics.google_product_names || []).join(', ');
+    renderAllCommercial();
+
+    _wvsAll=prompts.wvs;
+    _personaAll=prompts.persona;
+    _explorativeAll=prompts.explorative||[];
+    renderWVS();
+    renderPersonaRows();
+    renderExplorative();
+
+  } catch(err) {
+    console.error(err);
+    document.body.insertAdjacentHTML('afterbegin',
+      `<div style="background:#fef3c7;border-left:4px solid #f59e0b;padding:12px 18px;margin:12px;border-radius:8px;font-size:13px">
+        <strong>Data not loaded:</strong> ${err.message}
+      </div>`);
+  }
+});
+</script>
+</body>
+</html>
