@@ -679,6 +679,7 @@
       <button class="sub-btn active" data-analysis="versions">Study Metrics</button>
       <button class="sub-btn" data-analysis="alignment">Value Alignment</button>
       <button class="sub-btn" data-analysis="lengths">Response Lengths</button>
+      <button class="sub-btn" data-analysis="perquestion">Per-Question</button>
       <button class="sub-btn" data-analysis="diversity">Output Diversity</button>
       <button class="sub-btn" data-analysis="steering">Steering Sensitivity</button>
       <button class="sub-btn" data-analysis="commercial">Commercial</button>
@@ -715,11 +716,11 @@
           <span class="type-label" style="font-size:11px">Model:</span>
           <div id="align-model-group" style="display:flex;gap:6px;flex-wrap:wrap"></div>
           <span class="type-label" style="font-size:11px;margin-left:10px">Question:</span>
-          <select id="align-question-select" class="search-input" style="width:auto;max-width:440px;padding:6px 10px">
+          <select id="align-question-select" class="search-input" style="width:auto;max-width:100%;flex:1;min-width:280px;padding:6px 10px">
             <option value="">All questions (aggregated)</option>
           </select>
         </div>
-        <div id="align-question-full" style="display:none;font-size:12px;color:#374151;line-height:1.6;background:var(--surface);border-left:3px solid var(--teal);padding:8px 12px;border-radius:0 8px 8px 0;margin-bottom:16px;white-space:pre-wrap"></div>
+        <div id="align-question-full" style="display:none;font-size:13px;color:#374151;line-height:1.6;background:var(--surface);border-left:3px solid var(--teal);padding:10px 14px;border-radius:0 8px 8px 0;margin-bottom:16px;white-space:pre-wrap;word-break:break-word"></div>
 
         <div class="chart-title" id="chart-ws-title">Wasserstein Distance — Mean ± 1 SD</div>
         <div class="plotly-wrap" id="chart-ws" style="height:380px;margin-bottom:16px"></div>
@@ -734,14 +735,91 @@
           </span>
         </div>
         <div class="plotly-wrap" id="chart-void" style="height:280px"></div>
+
+        <div class="chart-title" style="margin-top:28px">
+          Variation Comparison — all repeats for one question, wave &amp; model
+          <span class="info-wrap">
+            <button type="button" class="info-dot" id="info-variation" aria-label="What this shows">i</button>
+            <div class="info-popover" id="info-variation-popover">Each question is asked repeatedly within a wave. This shows the raw probability the model assigned to every answer option, for every individual repeat — rather than the pooled mean shown above — so you can see run-to-run variation directly. Blank cells are repeats that couldn't be parsed into a usable answer, or that predate this wave's raw-vector export.</div>
+          </span>
+        </div>
+        <div class="commercial-filter-bar">
+          <span class="type-label" style="font-size:11px">Wave:</span>
+          <select id="variation-wave" class="search-input" style="width:auto;padding:6px 10px"></select>
+          <span class="type-label" style="font-size:11px;margin-left:10px">Question:</span>
+          <select id="variation-question" class="search-input" style="width:auto;flex:1;min-width:280px;padding:6px 10px"></select>
+          <span class="type-label" style="font-size:11px;margin-left:10px">Model:</span>
+          <select id="variation-model" class="search-input" style="width:auto;padding:6px 10px"></select>
+        </div>
+        <div id="variation-question-full" style="display:none;font-size:13px;color:#374151;line-height:1.6;background:var(--surface);border-left:3px solid var(--teal);padding:10px 14px;border-radius:0 8px 8px 0;margin-bottom:16px;white-space:pre-wrap;word-break:break-word"></div>
+        <div id="variation-empty" style="display:none;text-align:center;padding:32px 0;color:var(--text-muted);font-size:13px">
+          No per-repeat data for this wave yet — this feature only covers waves exported after the per-repeat data was added.
+        </div>
+        <div class="plotly-wrap" id="chart-variation" style="height:460px"></div>
+        <div id="variation-legend" style="display:none;font-size:12px;color:#374151;line-height:1.8;margin:10px 2px 0"></div>
       </div>
     </div>
 
     <!-- Response Lengths -->
     <div class="analysis-panel" id="panel-lengths">
-      <p class="section-note">Character count of each model's response to a persona prompt.</p>
-      <div class="chart-title">Response Length Distribution by Condition × Framing</div>
-      <div class="plotly-wrap" id="chart-lengths" style="height:360px"></div>
+      <p class="section-note">Character count of each model's response, across advertising, infinity chat, and explorative prompts.</p>
+      <div class="commercial-filter-bar">
+        <span class="type-label" style="font-size:11px">Dataset:</span>
+        <select id="lengths-dataset" class="search-input" style="width:auto;padding:6px 10px">
+          <option value="all">All</option>
+          <option value="advertising">Advertising</option>
+          <option value="infinity_chat">Infinity Chat</option>
+          <option value="explorative">Explorative</option>
+        </select>
+        <span class="type-label" style="font-size:11px;margin-left:10px">Model:</span>
+        <div id="lengths-model-group" style="display:flex;gap:6px;flex-wrap:wrap"></div>
+      </div>
+      <div class="chart-title">Response Length Distribution</div>
+      <div class="plotly-wrap" id="chart-lengths" style="height:400px"></div>
+    </div>
+
+    <!-- Per-Question deep dive -->
+    <div class="analysis-panel" id="panel-perquestion">
+      <p class="section-note">
+        Pick one open-ended question to see its <strong>keyness</strong> — words statistically over-represented in the model's
+        <em>recent</em> responses to this question versus its <em>early</em> ones (log-likelihood ratio, Dunning 1993), surfacing
+        creeping stylistic tics rather than a one-off snapshot.
+      </p>
+      <div class="commercial-filter-bar">
+        <span class="type-label" style="font-size:11px">Dataset:</span>
+        <select id="perq-dataset" class="search-input" style="width:auto;padding:6px 10px">
+          <option value="advertising">Advertising</option>
+          <option value="infinity_chat">Infinity Chat</option>
+          <option value="explorative">Explorative</option>
+        </select>
+        <span class="type-label" style="font-size:11px;margin-left:10px">Question:</span>
+        <select id="perq-question" class="search-input" style="width:auto;flex:1;min-width:320px;padding:6px 10px"></select>
+        <span class="type-label" style="font-size:11px;margin-left:10px">Model:</span>
+        <select id="perq-model" class="search-input" style="width:auto;padding:6px 10px"></select>
+      </div>
+      <div id="perq-question-full" style="display:none;font-size:13px;color:#374151;line-height:1.6;background:var(--surface);border-left:3px solid var(--teal);padding:10px 14px;border-radius:0 8px 8px 0;margin-bottom:16px;white-space:pre-wrap;word-break:break-word"></div>
+      <div id="perq-empty" style="display:none;text-align:center;padding:32px 0;color:var(--text-muted);font-size:13px">
+        Not enough responses collected yet for this question/model to compute keyness (needs at least a handful of waves on each side of the split).
+      </div>
+      <div id="perq-wrap">
+        <div id="perq-sample-note" style="font-size:11px;color:var(--text-muted);margin-bottom:12px"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+          <div>
+            <div class="chart-title" style="margin-top:0">More common recently</div>
+            <div class="table-wrap"><table class="data-table">
+              <thead><tr><th>Word</th><th>LLR</th><th>Early</th><th>Recent</th></tr></thead>
+              <tbody id="perq-recent-tbody"></tbody>
+            </table></div>
+          </div>
+          <div>
+            <div class="chart-title" style="margin-top:0">More common early on</div>
+            <div class="table-wrap"><table class="data-table">
+              <thead><tr><th>Word</th><th>LLR</th><th>Early</th><th>Recent</th></tr></thead>
+              <tbody id="perq-early-tbody"></tbody>
+            </table></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Output Diversity -->
@@ -754,8 +832,16 @@
         Not enough data yet — appears once at least two waves have been collected.
       </div>
       <div id="chart-4a-wrap">
+        <div class="commercial-filter-bar">
+          <span class="type-label" style="font-size:11px">Dataset:</span>
+          <div id="diversity-dataset-group" style="display:flex;gap:6px">
+            <button class="page-btn active" data-diversity-dataset="advertising">Advertising</button>
+            <button class="page-btn" data-diversity-dataset="infinity_chat">Infinity Chat</button>
+            <button class="page-btn" data-diversity-dataset="explorative">Explorative</button>
+          </div>
+        </div>
         <div class="chart-title">Baseline Response Stability — Similarity to Time-Averaged Mean</div>
-        <div class="plotly-wrap" id="chart-4a" style="height:calc(100vh - 295px)"></div>
+        <div class="plotly-wrap" id="chart-4a" style="height:calc(100vh - 340px)"></div>
       </div>
     </div>
 
@@ -771,6 +857,20 @@
         Not enough data yet — appears once at least two waves have been collected.
       </div>
       <div id="chart-4b-wrap">
+        <div class="commercial-filter-bar">
+          <span class="type-label" style="font-size:11px">Dataset:</span>
+          <div id="steering-dataset-group" style="display:flex;gap:6px">
+            <button class="page-btn active" data-steering-dataset="advertising">Advertising</button>
+            <button class="page-btn" data-steering-dataset="infinity_chat">Infinity Chat</button>
+          </div>
+          <span class="type-label" style="font-size:11px;margin-left:10px">Show:</span>
+          <div id="steering-toggle-group" style="display:flex;gap:6px">
+            <button class="page-btn active" data-steering-toggle="high">High SES</button>
+            <button class="page-btn active" data-steering-toggle="low">Low SES</button>
+            <button class="page-btn active" data-steering-toggle="system_msg">System msg</button>
+            <button class="page-btn active" data-steering-toggle="inline_prompt">Inline prompt</button>
+          </div>
+        </div>
         <div class="chart-title">Cosine Similarity to Baseline: Framing × SES per Wave</div>
         <div class="chart-col-label" id="lbl-4b-0"></div>
         <div class="plotly-wrap" id="chart-4b-0" style="height:320px;margin-bottom:16px"></div>
@@ -889,7 +989,7 @@ document.querySelectorAll('[data-nav]').forEach(el => {
 });
 
 // ── Plotly helpers ─────────────────────────────────────────────
-const CHART_IDS = ['chart-ws','chart-ent','chart-void','chart-output-tokens','chart-truncation','chart-lengths','chart-4a','chart-4b-0','chart-4b-1','chart-4b-2','chart-4b-3','chart-placement','chart-google','chart-nudge'];
+const CHART_IDS = ['chart-ws','chart-ent','chart-void','chart-variation','chart-output-tokens','chart-truncation','chart-lengths','chart-4a','chart-4b-0','chart-4b-1','chart-4b-2','chart-4b-3','chart-placement','chart-google','chart-nudge'];
 function resizeAll() {
   CHART_IDS.forEach(id => { const el = document.getElementById(id); if (el && el._fullLayout) Plotly.Plots.resize(el); });
 }
@@ -909,11 +1009,39 @@ function baseLayout(extra = {}) {
 }
 const PCFG = { responsive:true, displayModeBar:false };
 
+// ── Model version on hover ──────────────────────────────────────
+// Attaches the canonical dated model slug (not just the model name) to every
+// point on a per-model longitudinal trace, so hovering a "jump" tells you
+// which model snapshot produced it. Sourced from metrics.wave_versions,
+// already backed by the corrected canonical-slug join in compute_wave_versions.
+let _versionLookup = {};
+function initVersionLookup(wave_versions) {
+  _versionLookup = {};
+  for (const r of (wave_versions || [])) _versionLookup[r.wave + '|' + r.model] = r.model_used || '';
+}
+function shortSlug(slug) {
+  if (!slug) return '—';
+  return String(slug).split('/').pop().split(':')[0];
+}
+function withVersionHover(trace, model, waves, valueLabel) {
+  trace.customdata = waves.map(w => shortSlug(_versionLookup[w + '|' + model]));
+  trace.hovertemplate =
+    `<b>${esc(MODEL_LABELS[model] || model)}</b><br>` +
+    (valueLabel ? `${valueLabel}: %{y}<br>` : '%{y}<br>') +
+    `model: %{customdata}<extra></extra>`;
+  return trace;
+}
+
 // ── Data loading ───────────────────────────────────────────────
 async function loadData() {
-  const [mRes, pRes] = await Promise.all([fetch('data/metrics.json'), fetch('data/prompts.json')]);
+  const [mRes, pRes, bRes] = await Promise.all([
+    fetch('data/metrics.json'), fetch('data/prompts.json'), fetch('data/breakdowns_by_item.json'),
+  ]);
   if (!mRes.ok || !pRes.ok) throw new Error('data files missing — run generate_dashboard_data.py first');
-  return { metrics: await mRes.json(), prompts: await pRes.json() };
+  return {
+    metrics: await mRes.json(), prompts: await pRes.json(),
+    breakdowns: bRes.ok ? await bRes.json() : { keyness_by_item: {} },
+  };
 }
 
 // ── Charts ─────────────────────────────────────────────────────
@@ -979,7 +1107,7 @@ function alignXAxis(sortedWaves) {
            tickfont:{size:11}, tickangle:-45, categoryorder:'array', categoryarray: sortedWaves };
 }
 
-function initAlignFilters(agg, byItem, voidRates, voidByItem, questionItems) {
+function initAlignFilters(agg, byItem, voidRates, voidByItem, questionItems, waves) {
   _alignAgg = agg || [];
   _alignByItem = byItem || [];
   _alignVoidRates = voidRates || [];
@@ -1018,6 +1146,83 @@ function initAlignFilters(agg, byItem, voidRates, voidByItem, questionItems) {
   });
 
   renderWVSCharts();
+  initVariationComparison(questionItems || [], waves || []);
+}
+
+/* ── Variation comparison: all 20 repeats for one wave/question/model ──── */
+const _wvsRepeatsCache = {};
+async function loadWvsRepeats(wave) {
+  if (wave in _wvsRepeatsCache) return _wvsRepeatsCache[wave];
+  let data = null;
+  try {
+    const res = await fetch(`data/wvs_repeats/${wave}.json`);
+    if (res.ok) data = await res.json();
+  } catch (e) { /* no data for this wave — handled by caller as empty state */ }
+  _wvsRepeatsCache[wave] = data;
+  return data;
+}
+
+function initVariationComparison(questionItems, waves) {
+  const waveSel = document.getElementById('variation-wave');
+  const itemSel = document.getElementById('variation-question');
+  const modelSel = document.getElementById('variation-model');
+
+  waveSel.innerHTML = waves.slice().reverse().map(w => `<option value="${esc(w)}">${esc(w)}</option>`).join('');
+  itemSel.innerHTML = questionItems.map(it => {
+    const label = (it.question || it.item_id).replace(/\s+/g, ' ').trim();
+    return `<option value="${esc(it.item_id)}">${esc(it.item_id)} — ${esc(label.slice(0,70))}</option>`;
+  }).join('');
+  modelSel.innerHTML = MAIN_MODELS.map(m => `<option value="${esc(m)}">${esc(MODEL_LABELS[m])}</option>`).join('');
+
+  const OPT_LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  const fullBox = document.getElementById('variation-question-full');
+  const emptyEl = document.getElementById('variation-empty');
+  const chartWrap = document.getElementById('chart-variation').closest('.plotly-wrap');
+  const legendEl = document.getElementById('variation-legend');
+
+  async function render() {
+    const wave = waveSel.value, itemId = itemSel.value, model = modelSel.value;
+    if (!wave || !itemId || !model) return;
+    const meta = _alignItemMeta[itemId];
+    fullBox.innerHTML = meta ? esc((meta.question||itemId).replace(/\s+/g,' ').trim()) : esc(itemId);
+    fullBox.style.display = 'block';
+
+    const data = await loadWvsRepeats(wave);
+    const repeats = data && data[itemId] && data[itemId][model];
+    if (!repeats) {
+      emptyEl.style.display = 'block';
+      chartWrap.style.display = 'none';
+      legendEl.style.display = 'none';
+      return;
+    }
+    emptyEl.style.display = 'none';
+    chartWrap.style.display = '';
+
+    const options = (meta && meta.options && meta.options.length) ? meta.options
+      : OPT_LETTERS.slice(0, Math.max(1, ...repeats.filter(Boolean).map(v => Object.keys(v).length)));
+    const letters = options.map((_,i) => OPT_LETTERS[i]);
+    const z = repeats.map(vec => letters.map(l => (vec && vec[l] != null) ? vec[l] : NaN));
+    // customdata carries the full option text per column, repeated for every row,
+    // so the hover tooltip reads "B (Rather important): 0.55" instead of just "B".
+    const customdata = repeats.map(() => options);
+
+    Plotly.newPlot('chart-variation', [{
+      z, x: letters, y: repeats.map((_,i) => `repeat ${i+1}`), customdata,
+      type: 'heatmap', colorscale: [[0,'#e8f2f8'],[0.5,'#40ABC9'],[1,'#0d3a4d']], zmin:0, zmax:1,
+      hovertemplate: '%{y} · %{x} (%{customdata}): %{z:.3f}<extra></extra>',
+      colorbar: { thickness:12, len:.9 },
+    }], baseLayout({
+      margin:{l:80,r:12,t:8,b:40},
+      xaxis:{type:'category', tickangle:0, showgrid:false},
+      yaxis:{type:'category', autorange:'reversed', showgrid:false},
+    }), PCFG);
+
+    legendEl.innerHTML = letters.map((l,i) => `<strong>${esc(l)}</strong> — ${esc(options[i])}`).join('&nbsp;&nbsp;&nbsp;·&nbsp;&nbsp;&nbsp;');
+    legendEl.style.display = 'block';
+  }
+
+  [waveSel, itemSel, modelSel].forEach(el => el.addEventListener('change', render));
+  if (waves.length && questionItems.length) render();
 }
 
 function renderWVSCharts() {
@@ -1037,21 +1242,21 @@ function renderWVSCharts() {
 
     sortedWaves = [...new Set(_alignAgg.map(r=>r.wave))].sort();
 
-    const mk = (yKey, errKey) => models.map(model => {
+    const mk = (yKey, errKey, label) => models.map(model => {
       const d = _alignAgg.filter(r => r.model === model).sort((a,b) => a.wave < b.wave ? -1 : 1);
-      return {
+      return withVersionHover({
         x: d.map(r=>r.wave), y: d.map(r=>r[yKey]),
         error_y: { type:'data', array:d.map(r=>r[errKey]), visible:true, thickness:1.5, width:4, color:MODEL_CLR[model]+'99' },
         mode:'lines+markers', name:MODEL_LABELS[model],
         line:{color:MODEL_CLR[model],width:2.5}, marker:{size:6,color:MODEL_CLR[model]},
-      };
+      }, model, d.map(r=>r.wave), label);
     });
-    wsTraces = mk('ws_mean','ws_repeat_std');
+    wsTraces = mk('ws_mean','ws_repeat_std','ws');
 
     entTraces = models.map(model => {
       const d = _alignAgg.filter(r => r.model === model).sort((a,b) => a.wave < b.wave ? -1 : 1);
-      return { x:d.map(r=>r.wave), y:d.map(r=>r.entropy_mean), mode:'lines+markers', name:MODEL_LABELS[model],
-               line:{color:MODEL_CLR[model],width:2.5}, marker:{size:6,color:MODEL_CLR[model]} };
+      return withVersionHover({ x:d.map(r=>r.wave), y:d.map(r=>r.entropy_mean), mode:'lines+markers', name:MODEL_LABELS[model],
+               line:{color:MODEL_CLR[model],width:2.5}, marker:{size:6,color:MODEL_CLR[model]} }, model, d.map(r=>r.wave), 'entropy');
     });
     const ref = _alignAgg.filter(r => r.model === models[0]).sort((a,b) => a.wave<b.wave?-1:1);
     if (ref.length) entTraces.push({ x:ref.map(r=>r.wave), y:ref.map(r=>r.entropy_global_mean),
@@ -1066,21 +1271,42 @@ function renderWVSCharts() {
     const voidRowsQ = _alignVoidByItem.filter(r => r[2] === qid);
     const totalQ = rows.length + voidRowsQ.length;
     const voidPct = totalQ ? Math.round(1000 * voidRowsQ.length / totalQ) / 10 : 0;
-    fullBox.innerHTML = `${esc(qLabel)}<div style="margin-top:6px;font-size:11px;color:'#6b7280'}">`;
+    fullBox.innerHTML = `${esc(qLabel)}<div style="margin-top:6px;font-size:11px;color:#6b7280">${voidPct}% void across all repeats/waves for this question</div>`;
     fullBox.style.display = 'block';
 
     sortedWaves = [...new Set(rows.map(r=>r[0]))].sort();
 
-    wsTraces = models.map(model => {
-      const d = rows.filter(r=>r[1]===model).sort((a,b)=> a[0]<b[0]?-1:1);
-      return { x:d.map(r=>r[0]), y:d.map(r=>r[3]), mode:'lines+markers', name:MODEL_LABELS[model],
-               line:{color:MODEL_CLR[model],width:2.5}, marker:{size:6,color:MODEL_CLR[model]} };
-    });
-    entTraces = models.map(model => {
-      const d = rows.filter(r=>r[1]===model).sort((a,b)=> a[0]<b[0]?-1:1);
-      return { x:d.map(r=>r[0]), y:d.map(r=>r[4]), mode:'lines+markers', name:MODEL_LABELS[model],
-               line:{color:MODEL_CLR[model],width:2.5}, marker:{size:6,color:MODEL_CLR[model]} };
-    });
+    // Aggregate this question's repeats into mean ± sample-SD per (wave, model) —
+    // same math as the aggregate view's ws_repeat_std, just scoped to one question.
+    // Plotting every raw repeat row individually (previously) overplots up to 20
+    // points at the same wave x-position with no error bars and no indication
+    // of spread.
+    function aggByWave(valueIdx, valueLabel) {
+      return model => {
+        const byWave = {};
+        for (const r of rows) {
+          if (r[1] !== model) continue;
+          (byWave[r[0]] = byWave[r[0]] || []).push(r[valueIdx]);
+        }
+        const ws = Object.keys(byWave).sort();
+        const means = ws.map(w => {
+          const vals = byWave[w];
+          return vals.reduce((a,b)=>a+b,0) / vals.length;
+        });
+        const stds = ws.map((w,i) => {
+          const vals = byWave[w], m = means[i];
+          return vals.length > 1
+            ? Math.sqrt(vals.reduce((a,v)=>a+(v-m)**2,0) / (vals.length-1))
+            : 0;
+        });
+        return withVersionHover({ x: ws, y: means,
+                 error_y: { type:'data', array:stds, visible:true, thickness:1.5, width:4, color:MODEL_CLR[model]+'99' },
+                 mode:'lines+markers', name:MODEL_LABELS[model],
+                 line:{color:MODEL_CLR[model],width:2.5}, marker:{size:6,color:MODEL_CLR[model]} }, model, ws, valueLabel);
+      };
+    }
+    wsTraces  = models.map(aggByWave(3, 'ws'));
+    entTraces = models.map(aggByWave(4, 'entropy'));
     const gEnt = meta ? _alignEntropyFromDist(meta.global_distribution) : null;
     if (gEnt != null && sortedWaves.length) {
       entTraces.push({ x:sortedWaves, y:sortedWaves.map(()=>gEnt), mode:'lines', name:'WVS human',
@@ -1103,32 +1329,60 @@ function renderAlignVoidChart(models) {
   const sortedWaves = [...new Set(_alignVoidRates.map(r=>r.wave))].sort();
   const traces = models.map(model => {
     const d = _alignVoidRates.filter(r => r.model === model).sort((a,b) => a.wave < b.wave ? -1 : 1);
-    return {
+    return withVersionHover({
       x: d.map(r=>r.wave), y: d.map(r => r.total_n ? round2(100 * r.void_n / r.total_n) : 0),
       mode:'lines+markers', name:MODEL_LABELS[model],
       line:{color:MODEL_CLR[model],width:2.5}, marker:{size:6,color:MODEL_CLR[model]},
-    };
+    }, model, d.map(r=>r.wave), 'void %');
   });
   Plotly.newPlot('chart-void', traces,
     baseLayout({ xaxis: alignXAxis(sortedWaves), yaxis:{title:'Void (%)',gridcolor:'#e8e8e1',rangemode:'tozero'} }), PCFG);
 }
 
-function renderLengths(response_lengths) {
-  const groups = [
-    {label:'Baseline',         cond:'baseline',framing:null,           color:'#6366f1'},
-    {label:'High SES / sys',   cond:'high_ses',framing:'system_msg',   color:'#40ABC9'},
-    {label:'High SES / inline',cond:'high_ses',framing:'inline_prompt',color:'#6ee7b7'},
-    {label:'Low SES / sys',    cond:'low_ses', framing:'system_msg',   color:'#E57657'},
-    {label:'Low SES / inline', cond:'low_ses', framing:'inline_prompt',color:'#fca5a5'},
-  ];
-  Plotly.newPlot('chart-lengths',
-    groups.map(g => ({
-      type:'box',
-      y:response_lengths.filter(d=>d.condition===g.cond&&(g.framing===null||d.framing===g.framing)).map(d=>d.response_len),
-      name:g.label, boxpoints:'outliers',
-      marker:{color:g.color,size:3,opacity:.7}, line:{color:g.color}, fillcolor:g.color+'44',
-    })),
-    baseLayout({ yaxis:{title:'Characters',gridcolor:'#e8e8e1'}, showlegend:false }), PCFG);
+let _lengthsAll = [];
+let _lengthsModels = new Set(MAIN_MODELS);
+
+function initLengthsFilters(response_lengths) {
+  _lengthsAll = response_lengths || [];
+
+  const datasetSel = document.getElementById('lengths-dataset');
+  datasetSel.addEventListener('change', renderLengths);
+
+  const chipWrap = document.getElementById('lengths-model-group');
+  chipWrap.innerHTML = MAIN_MODELS.map(m => `<button class="page-btn active" data-lengths-model="${m}">
+    <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${MODEL_CLR[m]};margin-right:5px;vertical-align:middle"></span>${MODEL_LABELS[m]}</button>`
+  ).join('');
+  chipWrap.querySelectorAll('[data-lengths-model]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const model = btn.dataset.lengthsModel;
+      if (_lengthsModels.has(model)) {
+        if (_lengthsModels.size === 1) return;
+        _lengthsModels.delete(model);
+        btn.classList.remove('active');
+      } else {
+        _lengthsModels.add(model);
+        btn.classList.add('active');
+      }
+      renderLengths();
+    });
+  });
+
+  renderLengths();
+}
+
+function renderLengths() {
+  const dataset = document.getElementById('lengths-dataset').value;
+  const rows = _lengthsAll.filter(d =>
+    (dataset === 'all' || d.query_source === dataset) && _lengthsModels.has(d.model)
+  );
+  const traces = MAIN_MODELS.filter(m => _lengthsModels.has(m)).map(model => ({
+    type: 'histogram',
+    x: rows.filter(d => d.model === model).map(d => d.response_len),
+    name: MODEL_LABELS[model], opacity: 0.6,
+    marker: { color: MODEL_CLR[model] },
+  }));
+  Plotly.newPlot('chart-lengths', traces,
+    baseLayout({ barmode:'overlay', xaxis:{title:'Characters',gridcolor:'#e8e8e1'}, yaxis:{title:'Responses',gridcolor:'#e8e8e1'} }), PCFG);
 }
 
 function renderOutputTokens(truncation_rates) {
@@ -1138,12 +1392,12 @@ function renderOutputTokens(truncation_rates) {
     const d = truncation_rates.filter(r => r.model === model && r.output_tokens_mean != null)
                               .sort((a,b) => a.wave < b.wave ? -1 : 1);
     if (!d.length) return null;
-    return {
+    return withVersionHover({
       x: d.map(r => r.wave),
       y: d.map(r => r.output_tokens_mean),
       mode: 'lines+markers', name: MODEL_LABELS[model],
       line: {color: MODEL_CLR[model], width: 2.5}, marker: {size: 6, color: MODEL_CLR[model]},
-    };
+    }, model, d.map(r=>r.wave), 'tokens');
   }).filter(Boolean);
   Plotly.newPlot('chart-output-tokens', traces,
     baseLayout({ xaxis: alignXAxis(sortedWaves), yaxis: {title: 'Mean output tokens', gridcolor: '#e8e8e1', rangemode: 'tozero'} }), PCFG);
@@ -1156,12 +1410,12 @@ function renderTruncation(truncation_rates) {
   const sortedWaves = [...new Set(truncation_rates.map(r=>r.wave))].sort();
   const traces = MAIN_MODELS.map(model => {
     const d = truncation_rates.filter(r => r.model === model).sort((a,b) => a.wave < b.wave ? -1 : 1);
-    return {
+    return withVersionHover({
       x: d.map(r => r.wave),
       y: d.map(r => r.total ? round2(100 * r.truncated / r.total) : 0),
       mode: 'lines+markers', name: MODEL_LABELS[model],
       line: {color: MODEL_CLR[model], width: 2.5}, marker: {size: 6, color: MODEL_CLR[model]},
-    };
+    }, model, d.map(r=>r.wave), '%');
   });
   Plotly.newPlot('chart-truncation', traces,
     baseLayout({ xaxis: alignXAxis(sortedWaves), yaxis: {title: 'Truncated (%)', gridcolor: '#e8e8e1', rangemode: 'tozero'} }), PCFG);
@@ -1223,12 +1477,12 @@ function renderCommercialSeries(chartId, sumKey, mode) {
     }
     const waves = Object.keys(acc).sort();
     if (!waves.length) return null;
-    return {
+    return withVersionHover({
       x: waves,
       y: waves.map(w => mode === 'avg' ? (acc[w].n ? acc[w].sum / acc[w].n : 0) : acc[w].sum),
       mode: 'lines+markers', name: MODEL_LABELS[model],
       line: {color: MODEL_CLR[model], width: 2.5}, marker: {size: 6, color: MODEL_CLR[model]},
-    };
+    }, model, waves, mode === 'avg' ? 'avg' : 'total');
   }).filter(Boolean);
   Plotly.newPlot(chartId, traces,
     baseLayout({ xaxis: alignXAxis(sortedWaves), yaxis: {title: mode === 'avg' ? 'Mean per response' : 'Total events', gridcolor: '#e8e8e1', rangemode: 'tozero'} }), PCFG);
@@ -1323,33 +1577,80 @@ document.addEventListener('click', () => {
   document.querySelectorAll('.info-popover.open').forEach(p => p.classList.remove('open'));
 });
 
-function renderCosine4a(cosine_4a) {
-  const sortedWaves = [...new Set(cosine_4a.map(r=>r.wave))].sort();
+let _cosine4aAll = [];
+let _diversityDataset = 'advertising';
+
+function initDiversityFilters(cosine_4a) {
+  _cosine4aAll = cosine_4a || [];
+  document.getElementById('diversity-dataset-group').querySelectorAll('[data-diversity-dataset]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-diversity-dataset]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      _diversityDataset = btn.dataset.diversityDataset;
+      renderCosine4a();
+    });
+  });
+  renderCosine4a();
+}
+
+function renderCosine4a() {
+  const rows = _cosine4aAll.filter(r => r.dataset === _diversityDataset);
+  const sortedWaves = [...new Set(rows.map(r=>r.wave))].sort();
   Plotly.newPlot('chart-4a',
     MAIN_MODELS.map(model => {
-      const d = cosine_4a.filter(r=>r.model===model).sort((a,b)=>a.wave<b.wave?-1:1);
-      return { x:d.map(r=>r.wave), y:d.map(r=>r.sim_mean),
+      const d = rows.filter(r=>r.model===model).sort((a,b)=>a.wave<b.wave?-1:1);
+      return withVersionHover({ x:d.map(r=>r.wave), y:d.map(r=>r.sim_mean),
                error_y:{type:'data',array:d.map(r=>r.sim_std),visible:true,thickness:1.5,width:4,color:MODEL_CLR[model]+'99'},
                mode:'lines+markers', name:MODEL_LABELS[model],
-               line:{color:MODEL_CLR[model],width:2.5}, marker:{size:6,color:MODEL_CLR[model]} };
+               line:{color:MODEL_CLR[model],width:2.5}, marker:{size:6,color:MODEL_CLR[model]} }, model, d.map(r=>r.wave), 'cos sim');
     }),
     baseLayout({ yaxis:{range:[0,1],title:'Mean Cosine Similarity',gridcolor:'#e8e8e1'}, xaxis:{...alignXAxis(sortedWaves), title:'Wave'} }), PCFG);
 }
 
-function renderCosine4b(cosine_4b_ii) {
+let _cosine4bAll = [];
+let _steeringDataset = 'advertising';
+let _steeringShow = new Set(['high','low','system_msg','inline_prompt']);
+
+function initSteeringFilters(cosine_4b_ii) {
+  _cosine4bAll = cosine_4b_ii || [];
+  document.getElementById('steering-dataset-group').querySelectorAll('[data-steering-dataset]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-steering-dataset]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      _steeringDataset = btn.dataset.steeringDataset;
+      renderCosine4b();
+    });
+  });
+  document.getElementById('steering-toggle-group').querySelectorAll('[data-steering-toggle]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.steeringToggle;
+      if (_steeringShow.has(key)) { _steeringShow.delete(key); btn.classList.remove('active'); }
+      else { _steeringShow.add(key); btn.classList.add('active'); }
+      renderCosine4b();
+    });
+  });
+  renderCosine4b();
+}
+
+function renderCosine4b() {
   const SES_CLR={high:'#40ABC9',low:'#E57657'};
   const FD={system_msg:'solid',inline_prompt:'dash'};
   const FS={system_msg:'circle',inline_prompt:'diamond'};
+  const rows = _cosine4bAll.filter(r => r.dataset === _steeringDataset);
   MAIN_MODELS.forEach((model,i) => {
     document.getElementById(`lbl-4b-${i}`).textContent = MODEL_LABELS[model];
-    const sortedWaves = [...new Set(cosine_4b_ii.filter(r=>r.model===model).map(r=>r.wave))].sort();
+    const sortedWaves = [...new Set(rows.filter(r=>r.model===model).map(r=>r.wave))].sort();
     const traces=[];
     for (const f of ['system_msg','inline_prompt']) for (const s of ['high','low']) {
-      const d = cosine_4b_ii.filter(r=>r.model===model&&r.framing===f&&r.ses===s).sort((a,b)=>a.wave<b.wave?-1:1);
+      if (!_steeringShow.has(s) || !_steeringShow.has(f)) continue;
+      const d = rows.filter(r=>r.model===model&&r.framing===f&&r.ses===s).sort((a,b)=>a.wave<b.wave?-1:1);
       if (!d.length) continue;
+      const label = `${s} SES/${f.replace('_',' ')}`;
       traces.push({ x:d.map(r=>r.wave), y:d.map(r=>r.sim_mean),
+        customdata: d.map(r => shortSlug(_versionLookup[r.wave+'|'+model])),
+        hovertemplate: `<b>${esc(label)}</b><br>cos sim: %{y}<br>model: %{customdata}<extra></extra>`,
         error_y:{type:'data',array:d.map(r=>r.sim_std),visible:true,thickness:1,width:3,color:SES_CLR[s]+'66'},
-        mode:'lines+markers', name:`${s} SES/${f.replace('_',' ')}`,
+        mode:'lines+markers', name:label,
         line:{color:SES_CLR[s],dash:FD[f],width:2}, marker:{size:5,color:SES_CLR[s],symbol:FS[f]}, showlegend:false });
     }
     Plotly.newPlot(`chart-4b-${i}`, traces,
@@ -1545,6 +1846,66 @@ document.querySelectorAll('[data-src]').forEach(btn=>{
   });
 });
 
+// ── Per-Question deep dive ───────────────────────────────────────
+let _perqItems = { advertising: [], infinity_chat: [], explorative: [] };
+let _perqKeynessByItem = {};
+
+function initPerQuestion(prompts, breakdowns) {
+  _perqKeynessByItem = breakdowns?.keyness_by_item || {};
+
+  for (const p of (prompts.persona || [])) {
+    if (p.query_source === 'advertising' || p.query_source === 'infinity_chat') {
+      _perqItems[p.query_source].push({ key: p.query_key, label: `#${p.query_id} — ${(p.baseline?.prompt_text || '(no baseline collected)')}` });
+    }
+  }
+  for (const e of (prompts.explorative || [])) {
+    _perqItems.explorative.push({ key: e.item_id, label: `${e.item_id} — ${e.prompt || ''}` });
+  }
+
+  const datasetSel = document.getElementById('perq-dataset');
+  const questionSel = document.getElementById('perq-question');
+  const modelSel = document.getElementById('perq-model');
+  const fullBox = document.getElementById('perq-question-full');
+  modelSel.innerHTML = MAIN_MODELS.map(m => `<option value="${esc(m)}">${esc(MODEL_LABELS[m])}</option>`).join('');
+
+  function populateQuestions() {
+    const items = _perqItems[datasetSel.value] || [];
+    questionSel.innerHTML = items.map(it =>
+      `<option value="${esc(it.key)}">${esc(it.label.replace(/\s+/g,' ').trim().slice(0,80))}</option>`
+    ).join('');
+    renderPerQuestion();
+  }
+
+  function keynessRow(row) {
+    const [word, llr, early, recent] = row;
+    return `<tr><td>${esc(word)}</td><td class="tabular">${llr}</td><td class="tabular">${early}</td><td class="tabular">${recent}</td></tr>`;
+  }
+
+  function renderPerQuestion() {
+    const key = questionSel.value;
+    const model = modelSel.value;
+    const items = _perqItems[datasetSel.value] || [];
+    const item = items.find(it => it.key === key);
+    fullBox.style.display = item ? 'block' : 'none';
+    if (item) fullBox.textContent = item.label.replace(/^#?\S+\s—\s/, '').replace(/\s+/g,' ').trim();
+
+    const data = _perqKeynessByItem[key]?.[model];
+    document.getElementById('perq-empty').style.display = data ? 'none' : 'block';
+    document.getElementById('perq-wrap').style.display = data ? 'block' : 'none';
+    if (!data) return;
+
+    document.getElementById('perq-sample-note').textContent =
+      `Split into an early period (${data.early_n} responses) and a recent period (${data.recent_n} responses); words appearing fewer than 3 times combined are excluded as too noisy.`;
+    document.getElementById('perq-recent-tbody').innerHTML = data.top_recent.map(keynessRow).join('') || '<tr><td colspan="4" style="color:var(--text-muted)">No standout words</td></tr>';
+    document.getElementById('perq-early-tbody').innerHTML = data.top_early.map(keynessRow).join('') || '<tr><td colspan="4" style="color:var(--text-muted)">No standout words</td></tr>';
+  }
+
+  datasetSel.addEventListener('change', populateQuestions);
+  questionSel.addEventListener('change', renderPerQuestion);
+  modelSel.addEventListener('change', renderPerQuestion);
+  populateQuestions();
+}
+
 // ── Pagination ─────────────────────────────────────────────────
 const q=()=>document.getElementById('prompt-search').value.toLowerCase();
 document.getElementById('persona-prev').addEventListener('click',()=>{if(_personaPage>0){_personaPage--;renderPersonaRows(q());}});
@@ -1660,7 +2021,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
   navigate(); // show correct page on load
 
   try {
-    const {metrics,prompts}=await loadData();
+    const {metrics,prompts,breakdowns}=await loadData();
 
     const updated=metrics.generated;
     document.querySelectorAll('.nav-date').forEach(el=>el.textContent=`Updated: ${updated}`);
@@ -1669,24 +2030,25 @@ document.addEventListener('DOMContentLoaded',async()=>{
     document.getElementById('stat-persona').textContent=prompts.persona?.length??'—';
     document.getElementById('stat-explorative').textContent=prompts.explorative?.length??'—';
 
+    initVersionLookup(metrics.wave_versions);
     initStatCards(metrics);
     renderVersions(metrics);
 
     if (metrics.wvs_metrics?.length) {
-      initAlignFilters(metrics.wvs_metrics, metrics.wvs_by_item, metrics.wvs_void_rates, metrics.wvs_void_by_item, prompts.wvs);
+      initAlignFilters(metrics.wvs_metrics, metrics.wvs_by_item, metrics.wvs_void_rates, metrics.wvs_void_by_item, prompts.wvs, metrics.waves||[]);
     } else {
       document.getElementById('align-wvs7-charts').style.display = 'none';
       document.getElementById('align-wvs7-empty').style.display  = 'block';
     }
 
-    renderLengths(metrics.response_lengths);
+    initLengthsFilters(metrics.response_lengths);
     renderOutputTokens(metrics.truncation_rates);
     renderTruncation(metrics.truncation_rates);
 
-    if (metrics.cosine_4a?.length) { renderCosine4a(metrics.cosine_4a); }
+    if (metrics.cosine_4a?.length) { initDiversityFilters(metrics.cosine_4a); }
     else { document.getElementById('chart-4a-wrap').style.display='none'; document.getElementById('chart-4a-empty').style.display='block'; }
 
-    if (metrics.cosine_4b_ii?.length) { renderCosine4b(metrics.cosine_4b_ii); }
+    if (metrics.cosine_4b_ii?.length) { initSteeringFilters(metrics.cosine_4b_ii); }
     else { document.getElementById('chart-4b-wrap').style.display='none'; document.getElementById('chart-4b-empty').style.display='block'; }
 
     _commercialTimeseries = metrics.commercial_timeseries || [];
@@ -1704,6 +2066,7 @@ document.addEventListener('DOMContentLoaded',async()=>{
     renderWVS();
     renderPersonaRows();
     renderExplorative();
+    initPerQuestion(prompts, breakdowns);
 
   } catch(err) {
     console.error(err);
