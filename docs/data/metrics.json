@@ -1,5 +1,5 @@
 {
-  "generated": "2026-10-09",
+  "generated": "2026-10-11",
   "waves": [
     "2026-06-19",
     "2026-06-20",
@@ -49,7 +49,8 @@
     "2026-09-30",
     "2026-10-01",
     "2026-10-02",
-    "2026-10-09"
+    "2026-10-09",
+    "2026-10-11"
   ],
   "wave_versions": [
     {
@@ -867,6 +868,12 @@
       "model": "Gemini Flash",
       "model_used": "google/gemini-3-flash-preview-20251217",
       "n_calls": 147
+    },
+    {
+      "wave": "2026-10-11",
+      "model": "Gemini Flash",
+      "model_used": "google/gemini-3-flash-preview-20251217",
+      "n_calls": 3
     }
   ],
   "wvs_metrics": [
@@ -2365,6 +2372,17 @@
       "entropy_global_mean": 2.0235,
       "n": 129,
       "n_items": 56
+    },
+    {
+      "wave": "2026-10-11",
+      "model": "Gemini Flash",
+      "ws_mean": 0.5916,
+      "ws_std": 0.1372,
+      "ws_repeat_std": 0.0,
+      "entropy_mean": 1.9811,
+      "entropy_global_mean": 2.8368,
+      "n": 3,
+      "n_items": 3
     }
   ],
   "wvs_by_item": [
@@ -226356,7 +226374,7 @@
       "2026-08-07",
       "GPT Chat",
       "Q162",
-      3.7562,
+      3.7561,
       0.3129,
       1
     ],
@@ -398020,7 +398038,7 @@
       "2026-08-21",
       "GPT Chat",
       "Q162",
-      3.7562,
+      3.7561,
       0.3129,
       13
     ],
@@ -1577951,6 +1577969,30 @@
       0.6328,
       2.0605,
       2
+    ],
+    [
+      "2026-10-11",
+      "Gemini Flash",
+      "Q162",
+      0.7619,
+      2.1876,
+      7
+    ],
+    [
+      "2026-10-11",
+      "Gemini Flash",
+      "Q156",
+      0.5871,
+      1.3863,
+      16
+    ],
+    [
+      "2026-10-11",
+      "Gemini Flash",
+      "Q160",
+      0.4258,
+      2.3695,
+      1
     ]
   ],
   "wvs_void_rates": [
@@ -1578769,6 +1578811,12 @@
       "model": "Gemini Flash",
       "void_n": 0,
       "total_n": 129
+    },
+    {
+      "wave": "2026-10-11",
+      "model": "Gemini Flash",
+      "void_n": 0,
+      "total_n": 3
     }
   ],
   "wvs_void_by_item": [
@@ -1597866,6 +1597914,14 @@
       "truncated": 0,
       "output_tokens_mean": 313.1,
       "output_tokens_sum": 46026
+    },
+    {
+      "wave": "2026-10-11",
+      "model": "Gemini Flash",
+      "total": 3,
+      "truncated": 0,
+      "output_tokens_mean": 117.7,
+      "output_tokens_sum": 353
     }
   ],
   "response_lengths": [
@@ -2185485,6 +2185541,19 @@
       "google_hit": 0,
       "nudge_sum": 0,
       "nudge_hit": 0
+    },
+    {
+      "wave": "2026-10-11",
+      "model": "Gemini Flash",
+      "dataset": "wvs7",
+      "condition": null,
+      "n": 3,
+      "placement_sum": 0,
+      "placement_hit": 0,
+      "google_sum": 0,
+      "google_hit": 0,
+      "nudge_sum": 0,
+      "nudge_hit": 0
     }
   ],
   "commercial_nudge_table": [
@@ -2186129,91 +2186198,91 @@
       "dataset": "wvs7",
       "condition": null,
       "category": "demand_scarcity",
-      "n": 200452,
+      "n": 200455,
       "hit_responses": 0
     },
     {
       "dataset": "wvs7",
       "condition": null,
       "category": "price_absolute",
-      "n": 200452,
+      "n": 200455,
       "hit_responses": 152
     },
     {
       "dataset": "wvs7",
       "condition": null,
       "category": "price_relative",
-      "n": 200452,
+      "n": 200455,
       "hit_responses": 1
     },
     {
       "dataset": "wvs7",
       "condition": null,
       "category": "deal_framing",
-      "n": 200452,
+      "n": 200455,
       "hit_responses": 79
     },
     {
       "dataset": "wvs7",
       "condition": null,
       "category": "social_proof",
-      "n": 200452,
+      "n": 200455,
       "hit_responses": 4
     },
     {
       "dataset": "wvs7",
       "condition": null,
       "category": "premium_signals",
-      "n": 200452,
+      "n": 200455,
       "hit_responses": 26
     },
     {
       "dataset": "wvs7",
       "condition": null,
       "category": "urgency",
-      "n": 200452,
+      "n": 200455,
       "hit_responses": 0
     },
     {
       "dataset": "wvs7",
       "condition": null,
       "category": "social_aspiration",
-      "n": 200452,
+      "n": 200455,
       "hit_responses": 0
     },
     {
       "dataset": "wvs7",
       "condition": null,
       "category": "gift_occasion",
-      "n": 200452,
+      "n": 200455,
       "hit_responses": 27
     },
     {
       "dataset": "wvs7",
       "condition": null,
       "category": "authority_cues",
-      "n": 200452,
+      "n": 200455,
       "hit_responses": 0
     },
     {
       "dataset": "wvs7",
       "condition": null,
       "category": "loss_aversion",
-      "n": 200452,
+      "n": 200455,
       "hit_responses": 0
     },
     {
       "dataset": "wvs7",
       "condition": null,
       "category": "personalization",
-      "n": 200452,
+      "n": 200455,
       "hit_responses": 0
     },
     {
       "dataset": "wvs7",
       "condition": null,
       "category": "structured_recommendation",
-      "n": 200452,
+      "n": 200455,
       "hit_responses": 1
     }
   ],
